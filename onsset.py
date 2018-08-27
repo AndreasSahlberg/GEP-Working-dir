@@ -1098,7 +1098,7 @@ class SettlementProcessor:
         Repeat with newly electrified settlements until no more are added
         """
         new_grid_capacity = 0
-        grid_capacity_limit = 150000  # kW per 5 years
+        grid_capacity_limit = 1500000  # kW per 5 years
         x = self.df[SET_X].tolist()
         y = self.df[SET_Y].tolist()
         pop = self.df[SET_POP + "{}".format(year)].tolist()
