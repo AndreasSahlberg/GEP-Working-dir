@@ -734,7 +734,7 @@ class SettlementProcessor:
         sorted_pop = self.df[SET_POP_CALIB].copy()
         sorted_pop.sort_values(inplace=True)
         urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
-        cumulative_urban_current_pop = 0
+        cumulative_urban_pop = 0
         ii = 0
         while cumulative_urban_pop < urban_pop_break:
             cumulative_urban_pop += sorted_pop.iloc[ii]
