@@ -1069,13 +1069,13 @@ class SettlementProcessor:
 
         self.df[SET_LCOE_GRID + "{}".format(year)] = self.df.apply(lambda row: grid_price if row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1 else 99, axis=1)
 
-    def elec_extension(self, grid_calc, max_dist, year, start_year, end_year, timestep):
+    def elec_extension(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit):
         """
         Iterate through all electrified settlements and find which settlements can be economically connected to the grid
         Repeat with newly electrified settlements until no more are added
         """
         new_grid_capacity = 0
-        grid_capacity_limit = 100000000  # kW per 5 years
+        grid_capacity_limit = grid_cap_gen_limit  # kW per 5 years
         x = (self.df[SET_X]/1000).tolist()
         y = (self.df[SET_Y]/1000).tolist()
         pop = self.df[SET_POP + "{}".format(year)].tolist()
@@ -1105,7 +1105,7 @@ class SettlementProcessor:
                                               SET_ENERGY_PER_CELL + "{}".format(year)])
         consumption = rural_initially_electrified + urban_initially_electrified
         average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
-        peak_load = average_load / grid_calc.base_to_peal_load_ratio  # kW
+        peak_load = average_load / grid_calc.base_to_peak_load_ratio  # kW
         grid_capacity_limit -= peak_load
 
         cell_path_real = list(np.zeros(len(status)).tolist())
@@ -1132,7 +1132,7 @@ class SettlementProcessor:
             if year >= grid_reach[unelec]:
                 consumption = enerperhh[unelec]  # kWh/year
                 average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
-                peak_load = average_load / grid_calc.base_to_peal_load_ratio  # kW
+                peak_load = average_load / grid_calc.base_to_peak_load_ratio  # kW
 
                 node = (x[unelec], y[unelec])
                 closest_elec_node = closest_elec(node, elec_nodes2)
@@ -1190,7 +1190,7 @@ class SettlementProcessor:
                     if year >= grid_reach[unelec]:
                         consumption = enerperhh[unelec]  # kWh/year
                         average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
-                        peak_load = average_load / grid_calc.base_to_peal_load_ratio  # kW
+                        peak_load = average_load / grid_calc.base_to_peak_load_ratio  # kW
 
                         node = (x[unelec], y[unelec])
                         closest_elec_node = closest_elec(node, elec_nodes2)
@@ -1249,28 +1249,14 @@ class SettlementProcessor:
 
         return new_lcoes, cell_path_real, elecorder
 
-    def run_elec(self, grid_calc, max_dist, year, start_year, end_year, timestep):
+    def run_elec(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit):
         """
         Runs the grid extension algorithm
         """
         logging.info('Electrification algorithm starts running')
 
-        self.df[SET_LCOE_GRID + "{}".format(year)], self.df[SET_MIN_GRID_DIST + "{}".format(year)], self.df[SET_ELEC_ORDER + "{}".format(year)] = self.elec_extension(grid_calc, max_dist, year, start_year, end_year, timestep)
+        self.df[SET_LCOE_GRID + "{}".format(year)], self.df[SET_MIN_GRID_DIST + "{}".format(year)], self.df[SET_ELEC_ORDER + "{}".format(year)] = self.elec_extension(grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit)
 
-       #  #Calculate 2030 pre-electrification
-       #  logging.info('Determine future pre-electrification status')
-       #  self.df[SET_ELEC_FUTURE] = self.df.apply(lambda row: 1 if row[SET_ELEC_CURRENT] == 1 else 0, axis=1)
-       #
-       #  pre_elec_dist = 10  # The maximum distance from the grid in km to pre-electrifiy settlements
-       #  self.df[SET_ELEC_FUTURE] = self.df.apply(lambda row: 1 if row[SET_GRID_DIST_PLANNED] < pre_elec_dist else 0, axis=1)
-       #
-       #  pre_elec_dist = 10  # The maximum distance from the grid in km to pre-electrifiy settlements
-       #  self.df.loc[self.df[SET_GRID_DIST_PLANNED] < pre_elec_dist, SET_ELEC_FUTURE] = self.pre_elec(grid_lcoes_rural,
-       #                                                                                               grid_lcoes_urban,
-       #                                                                                               grid_calc,
-       #                                                                                               pre_elec_dist)
-       # self.df[SET_LCOE_GRID] = 99
-       # self.df[SET_LCOE_GRID] = self.df.apply(lambda row: grid_price if row[SET_ELEC_FUTURE] == 1 else 99, axis=1)
 
 
     def set_scenario_variables(self, energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step):
