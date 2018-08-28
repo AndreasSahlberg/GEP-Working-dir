@@ -135,7 +135,7 @@ class Technology:
     #start_year = 2015
     #end_year = 2030
     discount_rate = 0.08
-    grid_cell_area = 1  # in km2, normally 1km2
+    grid_cell_area = 0.01  # in km2, normally 1km2
 
     mv_line_cost = 9000  # USD/km
     lv_line_cost = 5000  # USD/km
