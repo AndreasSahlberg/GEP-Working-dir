@@ -7,11 +7,16 @@
 import os
 from onsset import *
 import pandas as pd
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
-# os.chdir('..')
-# os.chdir('db')
+root = tk.Tk()
+root.withdraw()
+root.attributes("-topmost", True)
 
-specs_path = str(input('Enter the name of the specs file: '))
+messagebox.showinfo('OnSSET', 'Open the specs file')
+specs_path = filedialog.askopenfilename()
+
 specs = pd.read_excel(specs_path, index_col=0)
 
 countries = str(input('countries: ')).split()
@@ -20,37 +25,31 @@ countries = specs.index.tolist() if 'all' in countries else countries
 choice = int(input('Enter 1 to split, 2 to prepare the inputs, 3 to run a scenario: '))
 
 if choice == 1:
-    settlements_csv = str(input('Enter the name of the file containing all countries: '))
-    base_dir = str(input('Enter the base file directory to save the split countries: '))
+    messagebox.showinfo('OnSSET', 'Open the csv file with GIS data')
+    settlements_csv = filedialog.askopenfilename()
+    messagebox.showinfo('OnSSET', 'Select the folder to save split countries')
+    base_dir = filedialog.asksaveasfilename()
 
     print('\n --- Splitting --- \n')
-
-    try:
-        os.makedirs(base_dir)
-    except FileExistsError:
-        pass
 
     df = pd.read_csv(settlements_csv)
 
     for country in countries:
         print(country)
-        df.loc[df[SET_COUNTRY] == country].to_csv(os.path.join(base_dir, '{}.csv'.format(country)), index=False)
+        df.loc[df[SET_COUNTRY] == country].to_csv(base_dir + '.csv', index=False)
 
 elif choice == 2:
-    base_dir = str(input('Enter the base file directory containing separated countries (files will be overwritten): '))
-    output_dir = str(input('Enter the output directory for the calibrated file: '))
-
-    try:
-        os.makedirs(output_dir)
-    except FileExistsError:
-        pass
+    messagebox.showinfo('OnSSET', 'Open the file containing separated countries')
+    base_dir = filedialog.askopenfilename()
+    messagebox.showinfo('OnSSET', 'Browse to result folder and name the calibrated file')
+    output_dir = filedialog.asksaveasfilename()
 
     print('\n --- Prepping --- \n')
 
     for country in countries:
         print(country)
-        settlements_in_csv = os.path.join(base_dir, '{}.csv'.format(country))
-        settlements_out_csv = os.path.join(output_dir, '{}.csv'.format(country))
+        settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
+        settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}.csv'.format(country))
 
         onsseter = SettlementProcessor(settlements_in_csv)
 
@@ -118,22 +117,19 @@ elif choice == 3:
     diesel_tag = 'high' if diesel_high else 'low'
     #do_combine = True if 'y' in input('Combine countries into a single file? <y/n> ') else False
 
-    base_dir = str(input('Enter the base file directory containing separated and prepped countries: '))
-    output_dir = str(input('Enter the output directory (can contain multiple runs): '))
+    messagebox.showinfo('OnSSET', 'Open the csv file with calibrated GIS data')
+    base_dir = filedialog.askopenfilename()
+    messagebox.showinfo('OnSSET', 'Browse to result folder and name the scenario to save outputs')
+    output_dir = filedialog.asksaveasfilename()
 
     print('\n --- Running scenario --- \n')
-
-    try:
-        os.makedirs(output_dir)
-    except FileExistsError:
-        pass
 
     for country in countries:
         # create country_specs here
         print(' --- {} --- {} --- {} --- '.format(country, wb_tier_urban, diesel_tag))
-        settlements_in_csv = os.path.join(base_dir, '{}.csv'.format(country))
-        settlements_out_csv = os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
-        summary_csv = os.path.join(output_dir, '{}_{}_{}_summary.csv'.format(country, wb_tier_urban, diesel_tag))
+        settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
+        settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
+        summary_csv = output_dir + 'summary.csv'
 
         onsseter = SettlementProcessor(settlements_in_csv)
 
@@ -281,11 +277,6 @@ elif choice == 3:
             #     onsseter.calculategridyears(start_year, year, gridspeed=10)
             # else:
             #     pass
-
-    #     #grid_lcoes_rural = grid_calc.get_grid_table(energy_per_hh_rural, num_people_per_hh_rural, max_grid_extension_dist)
-    #
-    #     #grid_lcoes_urban = grid_calc.get_grid_table(energy_per_hh_urban, num_people_per_hh_urban, max_grid_extension_dist)
-
 
             onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year)
 
