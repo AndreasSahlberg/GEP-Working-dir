@@ -146,7 +146,7 @@ elif choice == 3:
         energy_per_pp_rural = wb_tiers_all[wb_tier_rural]
         energy_per_pp_urban = wb_tiers_all[wb_tier_urban]
         mg_pv_cap_cost = specs.loc[country, SPE_CAP_COST_MG_PV]
-
+        grid_cap_gen_limit = specs.loc[country, 'NewGridGenerationCapacityTimestepLimit']
         #eleclimit = specs[SPE_ELEC_LIMIT][country]
         #investlimit = specs[SPE_INVEST_LIMIT][country]
 
@@ -271,7 +271,7 @@ elif choice == 3:
 
             onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
 
-            onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step)
+            onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
 
             # if year == end_year:
             #     onsseter.calculategridyears(start_year, year, gridspeed=10)
