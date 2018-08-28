@@ -1,9 +1,6 @@
 # Author: KTH dESA Last modified by Alexandros Korkovelos
 # Date: 7 March 2018
 # Python version: 3.5
-## Comment section
-
-# Andreas comment
 
 import os
 import logging
@@ -1662,49 +1659,27 @@ class SettlementProcessor:
                         (self.df[SET_CONFLICT] <=  conflictlimit), SET_LIMIT + "{}".format(year)] = 1
 
             elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-            #totalinvest = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_INVESTMENT_COST + "{}".format(year)])
 
             iteration += 1
 
-            #totalinvest = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_INVESTMENT_COST + "{}".format(year)])
-            #elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-
             if elecrate < eleclimit:
                 mintraveldistance += 0.1
+                if iteration > 200:
+                    mintraveldistance += 0.4
+                if iteration > 400:
+                    mintraveldistance += 0.9
                 if iteration > 500:
                     iteration = 0
                     conflictlimit += 1
                     mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
+                if conflictlimit > 5:
+                    break
                 else:
                     pass
             else:
                 still_looking = False
 
         print("The electrification rate achieved is {}".format(elecrate))
-
-        # # Based on electricity access level
-
-        # elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-        # elecrateconflict = sum(self.df[self.df[SET_CONFLICT] > conflictlimit][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-        #
-        # while elecrateconflict < (1 - eleclimit):
-        #     conflictlimit -= 1
-        #     elecrateconflict = sum(self.df[self.df[SET_CONFLICT] > conflictlimit][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-        #
-        # while elecrate > eleclimit:
-        #     self.df.loc[(self.df[SET_CONFLICT] > conflictlimit) & (self.df[SET_TRAVEL_HOURS] > maxtraveldistance), SET_LIMIT + "{}".format(year)] = 0
-        #     elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-        #     maxtraveldistance -= 1
-
-        # # Based on investment limitation
-        # totalinvest = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_INVESTMENT_COST + "{}".format(year)])
-        # print (totalinvest)
-        #
-        # while totalinvest < investlimit:
-        #     self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] == 0 & self.df[SET_TRAVEL_HOURS] < mintraveldistance, SET_LIMIT + "{}".format(year)] = 1
-        #     totalinvest = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_INVESTMENT_COST + "{}".format(year)])
-        #     print (totalinvest)
-        #     mintraveldistance += 1
 
     def final_decision(self,mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year, end_year, timestep):
         """" ... """
