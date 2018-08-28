@@ -1099,8 +1099,8 @@ class SettlementProcessor:
         """
         new_grid_capacity = 0
         grid_capacity_limit = 1500000  # kW per 5 years
-        x = self.df[SET_X].tolist()
-        y = self.df[SET_Y].tolist()
+        x = (self.df[SET_X]/1000).tolist()
+        y = (self.df[SET_Y]/1000).tolist()
         pop = self.df[SET_POP + "{}".format(year)].tolist()
         prev_pop = self.df[SET_POP + "{}".format(year - timestep)].tolist()
         confl = self.df[SET_CONFLICT].tolist()
@@ -1670,7 +1670,7 @@ class SettlementProcessor:
             #elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
 
             if elecrate < eleclimit:
-                mintraveldistance += 1
+                mintraveldistance += 0.1
                 if iteration > 500:
                     iteration = 0
                     conflictlimit += 1
