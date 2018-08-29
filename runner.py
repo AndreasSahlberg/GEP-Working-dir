@@ -265,7 +265,7 @@ elif choice == 3:
             eleclimit = eleclimits[year]
             #investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-            onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step)
+            onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
 
             onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, year, start_year, end_year, time_step)
 

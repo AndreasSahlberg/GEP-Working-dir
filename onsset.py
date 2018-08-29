@@ -85,6 +85,7 @@ SET_GRID_REACH_YEAR = "GridReachYear"
 SET_MIN_OFFGRID_CODE = "Off_Grid_Code"
 SET_ELEC_FINAL_CODE = "FinalElecCode"
 SET_DIST_TO_TRANS = "TransformerDist"
+SET_TOTAL_ENERGY_PER_CELL = "TotalEnergyPerCell"  # all previous + current timestep
 
 
 # Columns in the specs file must match these exactly
@@ -200,7 +201,7 @@ class Technology:
         cls.hv_lv_transformer_cost = hv_lv_transformer_cost
         cls.mv_increase_rate = mv_increase_rate
 
-    def get_lcoe(self, energy_per_cell, people, num_people_per_hh, start_year, end_year, conflict_status=0, additional_mv_line_length=0, capacity_factor=0, grid_penalty_ratio=1,
+    def get_lcoe(self, energy_per_cell, people, num_people_per_hh, start_year, end_year, new_connections, total_energy_per_cell, prev_code, conflict_status=0, additional_mv_line_length=0, capacity_factor=0, grid_penalty_ratio=1,
                  mv_line_length=0, travel_hours=0, elec_loop = 0, get_investment_cost=False):
         """
         Calculates the LCOE depending on the parameters. Optionally calculates the investment cost instead.
@@ -235,25 +236,49 @@ class Technology:
         if capacity_factor == 0:
             capacity_factor = self.capacity_factor
 
-        consumption = energy_per_cell # kWh/year
-        average_load = consumption / (1 - self.distribution_losses) / HOURS_PER_YEAR  # kW
-        peak_load = average_load / self.base_to_peak_load_ratio  # kW
+        def distribution_network(people, energy_per_cell):
+            if energy_per_cell <= 0:
+                energy_per_cell = 0.0001
+            if people <= 0:
+                people = 0.0001
 
-        no_mv_lines = peak_load / self.mv_line_capacity
-        no_lv_lines = peak_load / self.lv_line_capacity
-        lv_networks_lim_capacity = no_lv_lines / no_mv_lines
-        lv_networks_lim_length = ((self.grid_cell_area / no_mv_lines) / (self.lv_line_max_length / sqrt(2))) ** 2
-        actual_lv_lines = min([people / num_people_per_hh, max([lv_networks_lim_capacity, lv_networks_lim_length])])
-        hh_per_lv_network = (people / num_people_per_hh) / (actual_lv_lines * no_mv_lines)
-        lv_unit_length = sqrt(self.grid_cell_area / (people / num_people_per_hh)) * sqrt(2) / 2
-        lv_lines_length_per_lv_network = 1.333 * hh_per_lv_network * lv_unit_length
-        total_lv_lines_length = no_mv_lines * actual_lv_lines * lv_lines_length_per_lv_network
-        line_reach = (self.grid_cell_area / no_mv_lines) / (2 * sqrt(self.grid_cell_area / no_lv_lines))
-        total_length_of_lines = min([line_reach, self.mv_line_max_length]) * no_mv_lines
-        additional_hv_lines = max([0, round(sqrt(self.grid_cell_area) / (2 * min([line_reach, self.mv_line_max_length])) / 10, 3) - 1])
-        hv_lines_total_length = (sqrt(self.grid_cell_area) / 2) * additional_hv_lines * sqrt(self.grid_cell_area)
-        num_transformers = additional_hv_lines + no_mv_lines + (no_mv_lines * actual_lv_lines)
-        generation_per_year = average_load * HOURS_PER_YEAR
+            consumption = energy_per_cell # kWh/year
+            average_load = consumption / (1 - self.distribution_losses) / HOURS_PER_YEAR  # kW
+            peak_load = average_load / self.base_to_peak_load_ratio  # kW
+
+            no_mv_lines = peak_load / self.mv_line_capacity
+            no_lv_lines = peak_load / self.lv_line_capacity
+            lv_networks_lim_capacity = no_lv_lines / no_mv_lines
+            lv_networks_lim_length = ((self.grid_cell_area / no_mv_lines) / (self.lv_line_max_length / sqrt(2))) ** 2
+            actual_lv_lines = min([people / num_people_per_hh, max([lv_networks_lim_capacity, lv_networks_lim_length])])
+            hh_per_lv_network = (people / num_people_per_hh) / (actual_lv_lines * no_mv_lines)
+            lv_unit_length = sqrt(self.grid_cell_area / (people / num_people_per_hh)) * sqrt(2) / 2
+            lv_lines_length_per_lv_network = 1.333 * hh_per_lv_network * lv_unit_length
+            total_lv_lines_length = no_mv_lines * actual_lv_lines * lv_lines_length_per_lv_network
+            line_reach = (self.grid_cell_area / no_mv_lines) / (2 * sqrt(self.grid_cell_area / no_lv_lines))
+            total_length_of_lines = min([line_reach, self.mv_line_max_length]) * no_mv_lines
+            additional_hv_lines = max([0, round(sqrt(self.grid_cell_area) / (2 * min([line_reach, self.mv_line_max_length])) / 10, 3) - 1])
+            hv_lines_total_length = (sqrt(self.grid_cell_area) / 2) * additional_hv_lines * sqrt(self.grid_cell_area)
+            num_transformers = additional_hv_lines + no_mv_lines + (no_mv_lines * actual_lv_lines)
+            generation_per_year = average_load * HOURS_PER_YEAR
+            return hv_lines_total_length, total_length_of_lines, total_lv_lines_length, num_transformers, generation_per_year, peak_load
+
+        if people != new_connections and (prev_code == 1 or prev_code == 4 or prev_code == 5 or prev_code == 6 or prev_code == 7):
+            hv_lines_total_length1, total_length_of_lines1, total_lv_lines_length1, \
+            num_transformers1, generation_per_year1, peak_load1 = distribution_network(people, total_energy_per_cell)
+
+            hv_lines_total_length2, total_length_of_lines2, total_lv_lines_length2, \
+            num_transformers2, generation_per_year2, peak_load2 = distribution_network(people=(people - new_connections),
+                                                                           energy_per_cell=(total_energy_per_cell - energy_per_cell))
+            hv_lines_total_length = hv_lines_total_length1 - hv_lines_total_length2
+            total_length_of_lines = total_length_of_lines1 - total_length_of_lines2
+            total_lv_lines_length = total_lv_lines_length1 - total_lv_lines_length2
+            num_transformers = num_transformers1 - num_transformers2
+            generation_per_year = generation_per_year1 - generation_per_year2
+            peak_load = peak_load1 - peak_load2
+        else:
+            hv_lines_total_length, total_length_of_lines, total_lv_lines_length, \
+            num_transformers, generation_per_year, peak_load = distribution_network(people, energy_per_cell)
 
         # The investment and O&M costs are different for grid and non-grid solutions
         if self.grid_price > 0:
@@ -475,30 +500,6 @@ class Technology:
             discounted_costs = (investments + operation_and_maintenance + fuel - salvage) / discount_factor
             discounted_generation = el_gen / discount_factor
             return np.sum(discounted_costs) / np.sum(discounted_generation)
-
-    def get_grid_table(self, energy_per_cell, num_people_per_hh, max_dist):
-        """
-        Uses calc_lcoe to generate a 2D grid with the grid LCOEs, for faster access in teh electrification algorithm
-        """
-
-        logging.info('Creating a grid table for {} kWh/hh/year'.format(energy_per_cell))
-
-        # Coarser resolution at the high end (just to catch the few places with exceptional population density)
-        # The electrification algorithm must round off with the same scheme
-        people_arr_direct = list(range(1000)) + list(range(1000, 10000, 10)) + list(range(10000, 350000, 1000))
-        elec_dists = range(0, int(max_dist) + 20)  # add twenty to handle edge cases
-        grid_lcoes = pd.DataFrame(index=elec_dists, columns=people_arr_direct)
-
-        for people in people_arr_direct:
-            for additional_mv_line_length in elec_dists:
-                grid_lcoes[people][additional_mv_line_length] = self.get_lcoe(
-                    energy_per_cell=energy_per_cell,
-                    people=people,
-                    num_people_per_hh=num_people_per_hh,
-                    additional_mv_line_length=additional_mv_line_length)
-
-        return grid_lcoes.to_dict()
-
 
 class SettlementProcessor:
     """
@@ -927,6 +928,7 @@ class SettlementProcessor:
         self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(start_year)] = self.df.apply(lambda row: 0, axis=1)
         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] = self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] == 1 or
                                                                                              row[SET_ELEC_FUTURE_OFFGRID + "{}".format(start_year)] == 1 else 0, axis=1)
+        self.df[SET_ELEC_FINAL_CODE + "{}".format(start_year)] = self.df.apply(lambda row: 1 if row[SET_ELEC_CURRENT] == 1 else 99, axis=1)
 
         return min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2
 
@@ -984,60 +986,6 @@ class SettlementProcessor:
 
         return unelec_list
 
-    # def pre_elec(self, grid_lcoes_rural, grid_lcoes_urban, grid_calc, pre_elec_dist):
-    #     """
-    #     Determine which settlements are economically close to existing or planned grid lines, and should be
-    #     considered electrified in the electrification algorithm
-    #     """
-    #
-    #     df_neargrid = self.df.loc[self.df[SET_GRID_DIST_PLANNED] < pre_elec_dist]
-    #
-    #     pop = df_neargrid[SET_POP_FUTURE].tolist()
-    #     confl = df_neargrid[SET_CONFLICT].tolist()
-    #     travl = df_neargrid[SET_TRAVEL_HOURS].tolist()
-    #     urban = df_neargrid[SET_URBAN].tolist()
-    #     enerperhh = df_neargrid[SET_energy_per_cell]
-    #     nupppphh = df_neargrid[SET_NUM_PEOPLE_PER_HH]
-    #     grid_penalty_ratio = df_neargrid[SET_GRID_PENALTY].tolist()
-    #     status = df_neargrid[SET_ELEC_CURRENT].tolist()
-    #     min_code_lcoes = df_neargrid[SET_MIN_OFFGRID_LCOE].tolist()
-    #     dist_planned = df_neargrid[SET_GRID_DIST_PLANNED].tolist()
-    #
-    #     electrified, unelectrified = self.separate_elec_status(status)
-    #
-    #     logging.info('Calculate pre-elec')
-    #     for unelec in unelectrified:
-    #         grid_lcoe = self.grid_calc.get_lcoe(energy_per_cell=enerperhh[unelec],
-    #                                     people=pop[unelec],
-    #                                     num_people_per_hh=nupppphh[unelec],
-    #                                     conflict_status=confl[unelec],
-    #                                     travel_hours=travl[unelec])
-    #
-    #         if grid_lcoe < min_code_lcoes[unelec]:
-    #             status[unelec] = 1
-    #
-    #    return status
-    #
-    #     for unelec in unelectrified:
-    #
-    #         pop_index = pop[unelec]
-    #         if pop_index < 1000:
-    #             pop_index = int(pop_index)
-    #         elif pop_index < 10000:
-    #             pop_index = 10 * round(pop_index / 10)
-    #         else:
-    #             pop_index = 1000 * round(pop_index / 1000)
-    #
-    #         if urban[unelec]:
-    #             grid_lcoe = grid_lcoes_urban[pop_index][int(grid_penalty_ratio[unelec] * dist_planned[unelec])]
-    #         else:
-    #             grid_lcoe = grid_lcoes_rural[pop_index][int(grid_penalty_ratio[unelec] * dist_planned[unelec])]
-    #
-    #         if grid_lcoe < min_code_lcoes[unelec]:
-    #             status[unelec] = 1
-    #
-    #     return status
-
     def pre_electrification(self, grid_calc, grid_price, year, time_step, start_year):
 
         """" ... """
@@ -1084,6 +1032,9 @@ class SettlementProcessor:
         travl = self.df[SET_TRAVEL_HOURS].tolist()
         enerperhh = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
         nupppphh = self.df[SET_NUM_PEOPLE_PER_HH]
+        prev_code = self.df[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)]
+        new_connections = self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+        total_energy_per_cell = self.df[SET_TOTAL_ENERGY_PER_CELL]
         if year-timestep == start_year:
             elecorder = self.df[SET_ELEC_ORDER].tolist()
         else:
@@ -1150,6 +1101,9 @@ class SettlementProcessor:
                                                    start_year=year - timestep,
                                                    end_year=end_year,
                                                    people=pop[unelec],
+                                                   new_connections=new_connections[unelec],
+                                                   total_energy_per_cell=total_energy_per_cell[unelec],
+                                                   prev_code=prev_code[unelec],
                                                    num_people_per_hh=nupppphh[unelec],
                                                    conflict_status=confl[unelec],
                                                    travel_hours=travl[unelec],
@@ -1202,6 +1156,9 @@ class SettlementProcessor:
                                                            start_year=year - timestep,
                                                            end_year=end_year,
                                                            people=pop[unelec],
+                                                           new_connections=new_connections[unelec],
+                                                           total_energy_per_cell=total_energy_per_cell[unelec],
+                                                           prev_code=prev_code[unelec],
                                                            num_people_per_hh=nupppphh[unelec],
                                                            conflict_status=confl[unelec],
                                                            travel_hours=travl[unelec],
@@ -1228,6 +1185,9 @@ class SettlementProcessor:
                                                                    start_year=year - timestep,
                                                                    end_year=end_year,
                                                                    people=pop[unelec],
+                                                                   new_connections=new_connections[unelec],
+                                                                   total_energy_per_cell=total_energy_per_cell[unelec],
+                                                                   prev_code=prev_code[unelec],
                                                                    num_people_per_hh=nupppphh[unelec],
                                                                    conflict_status=confl[unelec],
                                                                    travel_hours=travl[unelec],
@@ -1259,7 +1219,7 @@ class SettlementProcessor:
 
 
 
-    def set_scenario_variables(self, energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step):
+    def set_scenario_variables(self, energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year):
         """
         Set the basic scenario parameters that differ based on urban/rural
         So that they are in the table and can be read directly to calculate LCOEs
@@ -1281,6 +1241,13 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_URBAN] == 0, SET_ENERGY_PER_CELL + "{}".format(year)] = energy_per_pp_rural * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 1, SET_ENERGY_PER_CELL + "{}".format(year)] = energy_per_pp_urban * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
+        if year - time_step == start_year:
+            self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = energy_per_pp_rural * self.df[SET_POP + "{}".format(year)]
+            self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = energy_per_pp_urban * self.df[SET_POP + "{}".format(year)]
+            # self.df[SET_TOTAL_ENERGY_PER_CELL] = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
+        else:
+            self.df[SET_TOTAL_ENERGY_PER_CELL] += self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
+
         # #Calculate new connections for off-grid related purposes
         # self.df.loc[self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - timestep)] == 1, SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - self.df[SET_POP + "{}".format(year - timestep)]
         # self.df.loc[self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - timestep)] == 0, SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
@@ -1295,14 +1262,6 @@ class SettlementProcessor:
         self.df[SET_GRID_REACH_YEAR] = self.df.apply(lambda row: int(start_year + (row[SET_GRID_DIST_PLANNED] * row[SET_COMBINED_CLASSIFICATION] / gridspeed)) if
                                                      row[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] == 0 else start_year,
                                                      axis=1)
-
-    # def calculategridyears(self, start_year, year, gridspeed):
-    #
-    #     logging.info('Determine dynamic electrification order')
-    #     self.df[SET_DYNAMIC_ORDER] = self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE + "{}".format(year)] == 1 else row[SET_ELEC_ORDER + "{}".format(year)], axis=1)
-
-        #logging.info('Estimate year of grid reach')
-        #self.df[SET_GRID_REACH_YEAR] = self.df.apply(lambda row: 0 if row[SET_DYNAMIC_ORDER] == 0 else int(start_year + (row[SET_MIN_GRID_DIST + "{}".format(year)] / gridspeed * row[SET_COMBINED_CLASSIFICATION])), axis=1)
 
     def calculate_off_grid_lcoes(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc,
                                  sa_pv_calc, mg_diesel_calc, sa_diesel_calc, year, start_year, end_year, timestep):
@@ -1336,7 +1295,10 @@ class SettlementProcessor:
                     return mg_hydro_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                                   start_year = year - timestep,
                                                   end_year= end_year,
-                                                  people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                                  people=row[SET_POP + "{}".format(year)],
+                                                  new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                                  total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                                  prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                   num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                                   conflict_status=row[SET_CONFLICT],
                                                   mv_line_length=row[SET_HYDRO_DIST])
@@ -1354,7 +1316,10 @@ class SettlementProcessor:
             lambda row: mg_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                             start_year = year - timestep,
                                             end_year = end_year,
-                                            people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                            people=row[SET_POP + "{}".format(year)],
+                                            new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                            total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                            prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                             num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                             conflict_status=row[SET_CONFLICT],
                                             capacity_factor=row[SET_GHI] / HOURS_PER_YEAR) if (row[SET_SOLAR_RESTRICTION] == 1 and row[SET_GHI] > 1000) else 99, axis=1)
@@ -1365,7 +1330,10 @@ class SettlementProcessor:
             lambda row: mg_wind_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                               start_year = year - timestep,
                                               end_year= end_year,
-                                              people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                              people=row[SET_POP + "{}".format(year)],
+                                              new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                              total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                              prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                               num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                               conflict_status=row[SET_CONFLICT],
                                               capacity_factor=row[SET_WINDCF])
@@ -1377,7 +1345,10 @@ class SettlementProcessor:
             lambda row:mg_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                                start_year=year - timestep,
                                                end_year= end_year,
-                                               people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               people=row[SET_POP + "{}".format(year)],
+                                               new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                                conflict_status=row[SET_CONFLICT],
                                                travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
@@ -1387,7 +1358,10 @@ class SettlementProcessor:
             lambda row:sa_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                                start_year=year - timestep,
                                                end_year=end_year,
-                                               people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               people=row[SET_POP + "{}".format(year)],
+                                               new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                                conflict_status=row[SET_CONFLICT],
                                                travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
@@ -1397,7 +1371,10 @@ class SettlementProcessor:
             lambda row: sa_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                             start_year=year - timestep,
                                             end_year=end_year,
-                                            people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                            people=row[SET_POP + "{}".format(year)],
+                                            new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                            total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                            prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                             num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                             conflict_status=row[SET_CONFLICT],
                                             capacity_factor=row[SET_GHI] / HOURS_PER_YEAR) if row[SET_GHI] > 1000 else 99, axis=1)
@@ -1429,56 +1406,6 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_MIN_OFFGRID + "{}".format(year)] == SET_LCOE_SA_DIESEL + "{}".format(
             year), SET_MIN_OFFGRID_CODE + "{}".format(year)] = codes[SET_LCOE_SA_DIESEL + "{}".format(year)]
 
-        # def res_offgrid_investment_cost(row):
-        #     min_code = row[SET_MIN_OFFGRID + "{}".format(year)]
-        #     if min_code == SET_LCOE_SA_DIESEL + "{}".format(year):
-        #         return sa_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                        people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                        num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                        travel_hours=row[SET_TRAVEL_HOURS],
-        #                                        conflict_status=row[SET_CONFLICT],
-        #                                        get_investment_cost=True)
-        #     elif min_code == SET_LCOE_SA_PV + "{}".format(year):
-        #         return sa_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                    people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                    num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                    capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
-        #                                    conflict_status=row[SET_CONFLICT],
-        #                                    get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_WIND + "{}".format(year):
-        #         return mg_wind_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                      people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                      num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                      capacity_factor=row[SET_WINDCF],
-        #                                      conflict_status=row[SET_CONFLICT],
-        #                                      get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_DIESEL + "{}".format(year):
-        #         return mg_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                        people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                        num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                        travel_hours=row[SET_TRAVEL_HOURS],
-        #                                        conflict_status=row[SET_CONFLICT],
-        #                                        get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_PV + "{}".format(year):
-        #         return mg_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                    people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                    num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                    capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
-        #                                    conflict_status=row[SET_CONFLICT],
-        #                                    get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_HYDRO + "{}".format(year):
-        #         return mg_hydro_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                       people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                       num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                       conflict_status=row[SET_CONFLICT],
-        #                                       mv_line_length=row[SET_HYDRO_DIST],
-        #                                       get_investment_cost=True)
-        #     else:
-        #         raise ValueError('A technology has not been accounted for in res_offgrid_investment_cost()')
-
-        # logging.info('Determine offgrid investment')
-        # self.df[SET_INVESTMENT_COST_OFFGRID + "{}".format(year)] = self.df.apply(res_offgrid_investment_cost, axis=1)
-
     def results_columns(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year):
         """
         Once the grid extension algorithm has been run, determine the minimum overall option, and calculate the
@@ -1496,60 +1423,6 @@ class SettlementProcessor:
 
         logging.info('Determine minimum overall LCOE')
         self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = self.df.apply(lambda row: (row[row[SET_MIN_OVERALL + "{}".format(year)]]), axis=1)
-
-        # def res_investment_cost(row):
-        #     min_code = row[SET_MIN_OVERALL + "{}".format(year)]
-        #     if min_code == SET_LCOE_SA_DIESEL + "{}".format(year):
-        #         return sa_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                        people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                        num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                        travel_hours=row[SET_TRAVEL_HOURS],
-        #                                        conflict_status=row[SET_CONFLICT],
-        #                                        get_investment_cost=True)
-        #     elif min_code == SET_LCOE_SA_PV + "{}".format(year):
-        #         return sa_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                    people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                    num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                    capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
-        #                                    conflict_status=row[SET_CONFLICT],
-        #                                    get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_WIND + "{}".format(year):
-        #         return mg_wind_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                      people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                      num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                      capacity_factor=row[SET_WINDCF],
-        #                                      conflict_status=row[SET_CONFLICT],
-        #                                      get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_DIESEL + "{}".format(year):
-        #         return mg_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                        people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                        num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                        travel_hours=row[SET_TRAVEL_HOURS],
-        #                                        conflict_status=row[SET_CONFLICT],
-        #                                        get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_PV + "{}".format(year):
-        #         return mg_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                    people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                    num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                    capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
-        #                                    conflict_status=row[SET_CONFLICT],
-        #                                    get_investment_cost=True)
-        #     elif min_code == SET_LCOE_MG_HYDRO + "{}".format(year):
-        #         return mg_hydro_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                       people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                       num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                       conflict_status=row[SET_CONFLICT],
-        #                                       mv_line_length=row[SET_HYDRO_DIST],
-        #                                       get_investment_cost=True)
-        #     elif min_code == SET_LCOE_GRID + "{}".format(year):
-        #         return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-        #                                   people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-        #                                   num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-        #                                   conflict_status=row[SET_CONFLICT],
-        #                                   additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
-        #                                   get_investment_cost=True)
-        #     else:
-        #         raise ValueError('A technology has not been accounted for in res_investment_cost()')
 
         logging.info('Add technology codes')
         codes = {SET_LCOE_GRID + "{}".format(year): 1,
@@ -1731,7 +1604,10 @@ class SettlementProcessor:
                 return sa_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                                start_year=year - timestep,
                                                end_year= end_year,
-                                               people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               people=row[SET_POP + "{}".format(year)],
+                                               new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                conflict_status=row[SET_CONFLICT],
@@ -1741,7 +1617,10 @@ class SettlementProcessor:
                 return sa_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                            start_year=year - timestep,
                                            end_year=end_year,
-                                           people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                           people=row[SET_POP + "{}".format(year)],
+                                           new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                            num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                            capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
                                            conflict_status=row[SET_CONFLICT],
@@ -1751,7 +1630,10 @@ class SettlementProcessor:
                 return mg_wind_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                              start_year=year - timestep,
                                              end_year=end_year,
-                                             people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                             people=row[SET_POP + "{}".format(year)],
+                                             new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                             total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                             prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                              num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                              capacity_factor=row[SET_WINDCF],
                                              conflict_status=row[SET_CONFLICT],
@@ -1761,7 +1643,10 @@ class SettlementProcessor:
                 return mg_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                                start_year=year - timestep,
                                                end_year=end_year,
-                                               people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               people=row[SET_POP + "{}".format(year)],
+                                               new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                conflict_status=row[SET_CONFLICT],
@@ -1771,7 +1656,10 @@ class SettlementProcessor:
                 return mg_pv_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                            start_year=year - timestep,
                                            end_year=end_year,
-                                           people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                           people=row[SET_POP + "{}".format(year)],
+                                           new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                            num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                            capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
                                            conflict_status=row[SET_CONFLICT],
@@ -1781,7 +1669,10 @@ class SettlementProcessor:
                 return mg_hydro_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                               start_year=year - timestep,
                                               end_year=end_year,
-                                              people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                              people=row[SET_POP + "{}".format(year)],
+                                              new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                              total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                              prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                               num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                               conflict_status=row[SET_CONFLICT],
                                               mv_line_length=row[SET_HYDRO_DIST],
@@ -1791,7 +1682,10 @@ class SettlementProcessor:
                 return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
                                           start_year=year - timestep,
                                           end_year=end_year,
-                                          people=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          people=row[SET_POP + "{}".format(year)],
+                                          new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                          prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                           conflict_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
