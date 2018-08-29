@@ -4,8 +4,6 @@
     <list default="true" id="404238a0-8d1c-4199-9434-cd9d5b0667e9" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change beforePath="$PROJECT_DIR$/onsset.py" afterPath="$PROJECT_DIR$/onsset.py" />
-      <change beforePath="$PROJECT_DIR$/runner.py" afterPath="$PROJECT_DIR$/runner.py" />
-      <change beforePath="$PROJECT_DIR$/specsMalawi.xlsx" afterPath="$PROJECT_DIR$/specsMalawi.xlsx" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -19,8 +17,8 @@
       <file leaf-file-name="runner.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/runner.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1241">
-              <caret line="77" column="94" lean-forward="false" selection-start-line="77" selection-start-column="88" selection-end-line="77" selection-end-column="94" />
+            <state relative-caret-position="94">
+              <caret line="282" column="31" lean-forward="false" selection-start-line="282" selection-start-column="21" selection-end-line="282" selection-end-column="31" />
               <folding />
             </state>
           </provider>
@@ -29,16 +27,10 @@
       <file leaf-file-name="onsset.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/onsset.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="168">
-              <caret line="1668" column="45" lean-forward="false" selection-start-line="1668" selection-start-column="37" selection-end-line="1668" selection-end-column="45" />
+            <state relative-caret-position="179">
+              <caret line="1030" column="46" lean-forward="true" selection-start-line="1030" selection-start-column="46" selection-end-line="1030" selection-end-column="46" />
               <folding>
                 <element signature="e#102#111#0" expanded="true" />
-                <element signature="e#31304#33501#0" expanded="false" />
-                <element signature="e#33541#37727#0" expanded="false" />
-                <element signature="e#37766#38984#0" expanded="false" />
-                <element signature="e#39133#44751#0" expanded="false" />
-                <element signature="e#51667#52019#0" expanded="false" />
-                <element signature="e#105557#113160#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -76,6 +68,7 @@
       <find>SET_TOTAL_ENERGY_PER_CELL</find>
       <find>future</find>
       <find>get_lcoe</find>
+      <find>apply_limi</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -111,6 +104,7 @@
     </navigator>
     <panes>
       <pane id="Scratches" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -122,7 +116,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -188,13 +181,13 @@
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.14955357" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33333334" sideWeight="0.5052083" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.35947713" sideWeight="0.49479166" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32843137" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.35947713" sideWeight="0.49479166" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39869282" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39869282" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -212,7 +205,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/onsset.py</url>
-          <line>240</line>
+          <line>268</line>
           <option name="timeStamp" value="24" />
         </line-breakpoint>
       </breakpoints>
@@ -240,16 +233,28 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/onsset.py">
       <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="28356">
+          <caret line="1668" column="45" lean-forward="false" selection-start-line="1668" selection-start-column="37" selection-end-line="1668" selection-end-column="45" />
+          <folding>
+            <element signature="e#102#111#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/runner.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1309">
+          <caret line="77" column="94" lean-forward="false" selection-start-line="77" selection-start-column="88" selection-end-line="77" selection-end-column="94" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/onsset.py">
+      <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="23970">
           <caret line="1410" column="42" lean-forward="true" selection-start-line="1410" selection-start-column="42" selection-end-line="1410" selection-end-column="42" />
           <folding>
             <element signature="e#102#111#0" expanded="true" />
-            <element signature="e#31304#33501#0" expanded="false" />
-            <element signature="e#33541#37727#0" expanded="false" />
-            <element signature="e#37766#38984#0" expanded="false" />
-            <element signature="e#39133#44751#0" expanded="false" />
-            <element signature="e#51667#52019#0" expanded="false" />
-            <element signature="e#105557#113160#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -268,12 +273,6 @@
           <caret line="1329" column="0" lean-forward="false" selection-start-line="1329" selection-start-column="0" selection-end-line="1329" selection-end-column="0" />
           <folding>
             <element signature="e#102#111#0" expanded="true" />
-            <element signature="e#31304#33501#0" expanded="false" />
-            <element signature="e#33541#37727#0" expanded="false" />
-            <element signature="e#37766#38984#0" expanded="false" />
-            <element signature="e#39133#44751#0" expanded="false" />
-            <element signature="e#51667#52019#0" expanded="false" />
-            <element signature="e#105557#113160#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -299,12 +298,6 @@
           <caret line="1134" column="33" lean-forward="false" selection-start-line="1134" selection-start-column="33" selection-end-line="1134" selection-end-column="33" />
           <folding>
             <element signature="e#102#111#0" expanded="true" />
-            <element signature="e#31304#33501#0" expanded="false" />
-            <element signature="e#33541#37727#0" expanded="false" />
-            <element signature="e#37766#38984#0" expanded="false" />
-            <element signature="e#39133#44751#0" expanded="false" />
-            <element signature="e#51667#52019#0" expanded="false" />
-            <element signature="e#105557#113160#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -325,24 +318,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/runner.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1241">
-          <caret line="77" column="94" lean-forward="false" selection-start-line="77" selection-start-column="88" selection-end-line="77" selection-end-column="94" />
+        <state relative-caret-position="94">
+          <caret line="282" column="31" lean-forward="false" selection-start-line="282" selection-start-column="21" selection-end-line="282" selection-end-column="31" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/onsset.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="168">
-          <caret line="1668" column="45" lean-forward="false" selection-start-line="1668" selection-start-column="37" selection-end-line="1668" selection-end-column="45" />
+        <state relative-caret-position="179">
+          <caret line="1030" column="46" lean-forward="true" selection-start-line="1030" selection-start-column="46" selection-end-line="1030" selection-end-column="46" />
           <folding>
             <element signature="e#102#111#0" expanded="true" />
-            <element signature="e#31304#33501#0" expanded="false" />
-            <element signature="e#33541#37727#0" expanded="false" />
-            <element signature="e#37766#38984#0" expanded="false" />
-            <element signature="e#39133#44751#0" expanded="false" />
-            <element signature="e#51667#52019#0" expanded="false" />
-            <element signature="e#105557#113160#0" expanded="false" />
           </folding>
         </state>
       </provider>
