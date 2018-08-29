@@ -1605,7 +1605,8 @@ class SettlementProcessor:
         self.df[SET_LIMIT + "{}".format(year)] = self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] == 1 else 0, axis=1)
         conflictlimit = self.df[SET_CONFLICT].min()
         mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
-        max_loop = self.df[SET_ELEC_ORDER + "{}".format(year)].max()
+        #max_loop = self.df[SET_ELEC_ORDER + "{}".format(year)].max()
+        max_loop = 0
         iteration = 0
 
         elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
@@ -1634,12 +1635,12 @@ class SettlementProcessor:
             iteration += 1
 
             if elecrate < eleclimit:
-                mintraveldistance += 0.1
-                if iteration > 200:
+                mintraveldistance += 0.2
+                if iteration > 100:
                     mintraveldistance += 0.4
-                if iteration > 400:
+                if iteration > 200:
                     mintraveldistance += 0.9
-                if iteration > 500:
+                if iteration > 300:
                     iteration = 0
                     conflictlimit += 1
                     mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
