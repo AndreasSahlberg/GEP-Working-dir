@@ -1117,6 +1117,7 @@ class SettlementProcessor:
                             cell_path_real[unelec] = dist
                             cell_path_adjusted[unelec] = dist_adjusted
                             new_grid_capacity += peak_load
+                            elecorder[unelec] = elec_loop_value
                             if unelec not in changes:
                                 changes.append(unelec)
                         else:
@@ -1169,7 +1170,7 @@ class SettlementProcessor:
                                 if (grid_lcoe < new_lcoes[unelec]) and (new_grid_capacity + peak_load < grid_capacity_limit):
                                     new_lcoes[unelec] = grid_lcoe
                                     cell_path_real[unelec] = dist + prev_dist
-                                    elecorder[unelec] = loops
+                                    elecorder[unelec] = elecorder[electrified[closest_elec_node]] + 1
                                     new_grid_capacity += peak_load
                                     if unelec not in changes:
                                         changes.append(unelec)
@@ -1193,16 +1194,16 @@ class SettlementProcessor:
                                                                    travel_hours=travl[unelec],
                                                                    additional_mv_line_length=dist,
                                                                    elec_loop=elecorder[elec] + 1)
-                            if grid_lcoe < min_code_lcoes[unelec]:
-                                if grid_lcoe < new_lcoes[unelec]:
-                                    new_lcoes[unelec] = grid_lcoe
-                                    cell_path_real[unelec] = dist + prev_dist
-                                    elecorder[unelec] = loops
-                                    if grid_capacity_addition_loop == 0:
-                                        new_grid_capacity += peak_load
-                                        grid_capacity_addition_loop += 1
-                                    if unelec not in changes:
-                                        changes.append(unelec)
+                                if grid_lcoe < min_code_lcoes[unelec]:
+                                    if grid_lcoe < new_lcoes[unelec]:
+                                        new_lcoes[unelec] = grid_lcoe
+                                        cell_path_real[unelec] = dist + prev_dist
+                                        elecorder[unelec] = elecorder[elec] + 1
+                                        if grid_capacity_addition_loop == 0:
+                                            new_grid_capacity += peak_load
+                                            grid_capacity_addition_loop += 1
+                                        if unelec not in changes:
+                                            changes.append(unelec)
 
             electrified = changes[:]
             unelectrified = set(unelectrified).difference(electrified)
@@ -1701,6 +1702,9 @@ class SettlementProcessor:
 
         # Update the actual electrification column with results
         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
+
+    def delete_redundant_columns(self):
+        pass
 
     def calc_summaries(self, df_summary, sumtechs, year):
 

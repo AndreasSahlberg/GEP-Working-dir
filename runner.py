@@ -234,9 +234,42 @@ elif choice == 3:
 
         # Used to identify the steps and include them in the results
 
+        ### FIRST RUN - NO TIMESTEP
+        #
+        # yearsofanalysis = [2030]
+        # eleclimits = {2030: 1}
+        #
+        # # eleclimit = float(input('Provide the targeted electrification rate in {}:'.format(year)))
+        # eleclimit = eleclimits[year]
+        # # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
+        #
+        # onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural,
+        #                                 num_people_per_hh_urban, time_step, start_year)
+        #
+        # onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+        #                                   sa_diesel_calc, year, start_year, end_year, time_step)
+        #
+        # onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
+        #
+        # onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
+        #
+        # onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+        #                          grid_calc, year)
+        #
+        # onsseter.apply_limitations(eleclimit, year)
+        #
+        # onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+        #                         grid_calc, year, end_year, time_step)
+        #
+        # onsseter.delete_redundant_columns()
+
+        ### END OF FIRST RUN
+
         # yearsofanalysis = list(range((start_year + time_step), end_year + 1, time_step))
         yearsofanalysis = [2020, 2025, 2030]
         eleclimits = {2020: 0.6, 2025: 0.8, 2030: 1}
+
+
 
         # This is used in the calculation of summaries at the end
 
