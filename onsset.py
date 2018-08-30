@@ -540,19 +540,19 @@ class SettlementProcessor:
         logging.info('Sort by country, Y and X')
         self.df.sort_values(by=[SET_COUNTRY, SET_Y, SET_X], inplace=True)
 
-        logging.info('Add columns with location in degrees')
-        project = Proj('+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
-
-        def get_x(row):
-            x, y = project(row[SET_X] * 1000, row[SET_Y] * 1000, inverse=True)
-            return x
-
-        def get_y(row):
-            x, y = project(row[SET_X] * 1000, row[SET_Y] * 1000, inverse=True)
-            return y
-
-        self.df[SET_X_DEG] = self.df.apply(get_x, axis=1)
-        self.df[SET_Y_DEG] = self.df.apply(get_y, axis=1)
+        # logging.info('Add columns with location in degrees')
+        # project = Proj('+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
+        #
+        # def get_x(row):
+        #     x, y = project(row[SET_X] * 1000, row[SET_Y] * 1000, inverse=True)
+        #     return x
+        #
+        # def get_y(row):
+        #     x, y = project(row[SET_X] * 1000, row[SET_Y] * 1000, inverse=True)
+        #     return y
+        #
+        # self.df[SET_X_DEG] = self.df.apply(get_x, axis=1)
+        # self.df[SET_Y_DEG] = self.df.apply(get_y, axis=1)
 
     def grid_penalties(self):
         """
