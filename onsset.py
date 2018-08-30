@@ -800,7 +800,8 @@ class SettlementProcessor:
                                                 else row[SET_POP_CALIB] * rural_growth,
                                                 axis=1)
 
-        yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
+        yearsofanalysis = [2023, 2030]
+        # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
         factor = 1
 
         for year in yearsofanalysis:
