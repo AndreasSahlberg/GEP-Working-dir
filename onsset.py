@@ -1194,16 +1194,16 @@ class SettlementProcessor:
                                                                    travel_hours=travl[unelec],
                                                                    additional_mv_line_length=dist,
                                                                    elec_loop=elecorder[elec] + 1)
-                                if grid_lcoe < min_code_lcoes[unelec]:
-                                    if grid_lcoe < new_lcoes[unelec]:
-                                        new_lcoes[unelec] = grid_lcoe
-                                        cell_path_real[unelec] = dist + prev_dist
-                                        elecorder[unelec] = elecorder[elec] + 1
-                                        if grid_capacity_addition_loop == 0:
-                                            new_grid_capacity += peak_load
-                                            grid_capacity_addition_loop += 1
-                                        if unelec not in changes:
-                                            changes.append(unelec)
+                                    if grid_lcoe < min_code_lcoes[unelec]:
+                                        if grid_lcoe < new_lcoes[unelec]:
+                                            new_lcoes[unelec] = grid_lcoe
+                                            cell_path_real[unelec] = dist + prev_dist
+                                            elecorder[unelec] = elecorder[elec] + 1
+                                            if grid_capacity_addition_loop == 0:
+                                                new_grid_capacity += peak_load
+                                                grid_capacity_addition_loop += 1
+                                            if unelec not in changes:
+                                                changes.append(unelec)
 
             electrified = changes[:]
             unelectrified = set(unelectrified).difference(electrified)
