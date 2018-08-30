@@ -1703,8 +1703,8 @@ class SettlementProcessor:
         # Update the actual electrification column with results
         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
 
-    def delete_redundant_columns(self):
-        pass
+    def delete_redundant_columns(self, year):
+        self.df['ResultsNoTimestep'] = self.df[SET_ELEC_FINAL_CODE + "{}".format(year)]
 
     def calc_summaries(self, df_summary, sumtechs, year):
 
