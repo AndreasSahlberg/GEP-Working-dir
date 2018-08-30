@@ -1223,7 +1223,6 @@ class SettlementProcessor:
                                 prev_dist = cell_path_real[elec]
                                 dist = sqrt((x[elec] - x[unelec]) ** 2 + (y[elec] - y[unelec]) ** 2)
                                 if prev_dist + dist < max_dist:
-
                                     grid_lcoe = grid_calc.get_lcoe(energy_per_cell=enerperhh[unelec],
                                                                    start_year=year - timestep,
                                                                    end_year=end_year,
@@ -1233,17 +1232,16 @@ class SettlementProcessor:
                                                                    travel_hours=travl[unelec],
                                                                    additional_mv_line_length=dist,
                                                                    elec_loop=elecorder[elec] + 1)
-                            if grid_lcoe < min_code_lcoes[unelec]:
-                                if grid_lcoe < new_lcoes[unelec]:
-                                    new_lcoes[unelec] = grid_lcoe
-                                    cell_path_real[unelec] = dist + prev_dist
-                                    elecorder[unelec] = loops
-                                    if grid_capacity_addition_loop == 0:
-                                        new_grid_capacity += peak_load
-                                        grid_capacity_addition_loop += 1
-                                    if unelec not in changes:
-                                        changes.append(unelec)
-
+                                    if grid_lcoe < min_code_lcoes[unelec]:
+                                        if grid_lcoe < new_lcoes[unelec]:
+                                            new_lcoes[unelec] = grid_lcoe
+                                            cell_path_real[unelec] = dist + prev_dist
+                                            elecorder[unelec] = loops
+                                            if grid_capacity_addition_loop == 0:
+                                                new_grid_capacity += peak_load
+                                                grid_capacity_addition_loop += 1
+                                            if unelec not in changes:
+                                                changes.append(unelec)
             electrified = changes[:]
             unelectrified = set(unelectrified).difference(electrified)
 
@@ -1256,7 +1254,6 @@ class SettlementProcessor:
         logging.info('Electrification algorithm starts running')
 
         self.df[SET_LCOE_GRID + "{}".format(year)], self.df[SET_MIN_GRID_DIST + "{}".format(year)], self.df[SET_ELEC_ORDER + "{}".format(year)] = self.elec_extension(grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit)
-
 
 
     def set_scenario_variables(self, energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step):
