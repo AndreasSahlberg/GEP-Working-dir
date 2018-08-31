@@ -270,6 +270,9 @@ class Technology:
             hv_lines_total_length2, total_length_of_lines2, total_lv_lines_length2, \
             num_transformers2, generation_per_year2, peak_load2 = distribution_network(people=(people - new_connections),
                                                                            energy_per_cell=(total_energy_per_cell - energy_per_cell))
+            hv_lines_total_length3, total_length_of_lines3, total_lv_lines_length3, \
+            num_transformers3, generation_per_year3, peak_load3 = distribution_network(people=new_connections,
+                                                                           energy_per_cell=energy_per_cell)
             hv_lines_total_length = hv_lines_total_length1 - hv_lines_total_length2
             total_length_of_lines = total_length_of_lines1 - total_length_of_lines2
             total_lv_lines_length = total_lv_lines_length1 - total_lv_lines_length2
