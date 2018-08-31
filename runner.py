@@ -236,7 +236,7 @@ elif choice == 3:
 
         ### FIRST RUN - NO TIMESTEP
 
-        time_step = 15
+        time_step = 12
         year = 2030
         eleclimits = {2030: 1}
 
