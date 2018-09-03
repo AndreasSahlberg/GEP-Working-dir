@@ -290,7 +290,7 @@ class Technology:
                                  total_length_of_lines * (self.mv_line_cost * 1.1) + \
                                  total_lv_lines_length * (self.lv_line_cost * 1.1) + \
                                  num_transformers * self.hv_lv_transformer_cost + \
-                                 (people / num_people_per_hh) * self.connection_cost_per_hh + \
+                                 (new_connections/ num_people_per_hh) * self.connection_cost_per_hh + \
                                  additional_mv_line_length * ((self.mv_line_cost * 1.1) * \
                                                               (1 + self.mv_increase_rate)**((additional_mv_line_length/5)-1))
                 td_investment_cost = td_investment_cost * grid_penalty_ratio
@@ -309,7 +309,7 @@ class Technology:
                                      total_length_of_lines * (self.mv_line_cost * 1.25) + \
                                      total_lv_lines_length * (self.lv_line_cost * 1.25) + \
                                      num_transformers * self.hv_lv_transformer_cost + \
-                                     (people / num_people_per_hh) * self.connection_cost_per_hh + \
+                                     (new_connections/ num_people_per_hh) * self.connection_cost_per_hh + \
                                      additional_mv_line_length * ((self.mv_line_cost * 1.25) * \
                                                                   (1 + self.mv_increase_rate) ** (
                                                                   (additional_mv_line_length / 5) - 1))
@@ -329,7 +329,7 @@ class Technology:
                                      total_length_of_lines * (self.mv_line_cost * 1.5) + \
                                      total_lv_lines_length * (self.lv_line_cost * 1.5) + \
                                      num_transformers * self.hv_lv_transformer_cost + \
-                                     (people / num_people_per_hh) * self.connection_cost_per_hh + \
+                                     (new_connections/ num_people_per_hh) * self.connection_cost_per_hh + \
                                      additional_mv_line_length * ((self.mv_line_cost * 1.5) * \
                                                                   (1 + self.mv_increase_rate) ** (
                                                                   (additional_mv_line_length / 5) - 1))
@@ -349,7 +349,7 @@ class Technology:
                                      total_length_of_lines * (self.mv_line_cost * 2) + \
                                      total_lv_lines_length * (self.lv_line_cost * 2) + \
                                      num_transformers * self.hv_lv_transformer_cost + \
-                                     (people / num_people_per_hh) * self.connection_cost_per_hh + \
+                                     (new_connections/ num_people_per_hh) * self.connection_cost_per_hh + \
                                      additional_mv_line_length * ((self.mv_line_cost * 2) * \
                                                                   (1 + self.mv_increase_rate) ** (
                                                                   (additional_mv_line_length / 5) - 1))
@@ -368,7 +368,7 @@ class Technology:
                                      total_length_of_lines * self.mv_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) + \
                                      total_lv_lines_length * self.lv_line_cost + \
                                      num_transformers * self.hv_lv_transformer_cost + \
-                                     (people / num_people_per_hh) * self.connection_cost_per_hh + \
+                                     (new_connections/ num_people_per_hh) * self.connection_cost_per_hh + \
                                      (1 + self.existing_grid_cost_ratio * elec_loop) * additional_mv_line_length * (
                                          self.mv_line_cost * (1 + self.mv_increase_rate) **
                                          ((additional_mv_line_length / 5) - 1))
@@ -390,7 +390,7 @@ class Technology:
                 lv_total_line_cost = self.lv_line_cost * total_lv_lines_length * 1.03 if self.standalone else self.lv_line_cost * total_lv_lines_length * 1.05
                 installed_capacity = peak_load / capacity_factor
                 capital_investment = installed_capacity * self.capital_cost * 1.03 if self.standalone else installed_capacity * self.capital_cost * 1.05
-                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (people / num_people_per_hh) * self.connection_cost_per_hh
+                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (new_connections/ num_people_per_hh) * self.connection_cost_per_hh
                 td_om_cost = td_investment_cost * self.om_of_td_lines * 1.03 if self.standalone else td_investment_cost * self.om_of_td_lines * 1.05
                 total_investment_cost = td_investment_cost + capital_investment
                 total_om_cost = td_om_cost + (self.capital_cost * 1.03 * self.om_costs * 1.03 * installed_capacity) if self.standalone else td_om_cost + (self.capital_cost * 1.05 * self.om_costs * 1.05 * installed_capacity)
@@ -401,7 +401,7 @@ class Technology:
                 lv_total_line_cost = self.lv_line_cost * total_lv_lines_length * 1.07 if self.standalone else self.lv_line_cost * total_lv_lines_length * 1.125
                 installed_capacity = peak_load / capacity_factor
                 capital_investment = installed_capacity * self.capital_cost * 1.07 if self.standalone else installed_capacity * self.capital_cost * 1.125
-                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (people / num_people_per_hh) * self.connection_cost_per_hh
+                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (new_connections/ num_people_per_hh) * self.connection_cost_per_hh
                 td_om_cost = td_investment_cost * self.om_of_td_lines * 1.07 if self.standalone else td_investment_cost * self.om_of_td_lines * 1.125
                 total_investment_cost = td_investment_cost + capital_investment
                 total_om_cost = td_om_cost + (self.capital_cost * 1.07 * self.om_costs * 1.07 * installed_capacity) if self.standalone else td_om_cost + (self.capital_cost * 1.125 * self.om_costs * 1.125 * installed_capacity)
@@ -412,7 +412,7 @@ class Technology:
                 lv_total_line_cost = self.lv_line_cost * total_lv_lines_length * 1.125 if self.standalone else self.lv_line_cost * total_lv_lines_length * 1.25
                 installed_capacity = peak_load / capacity_factor
                 capital_investment = installed_capacity * self.capital_cost * 1.125 if self.standalone else installed_capacity * self.capital_cost * 1.25
-                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (people / num_people_per_hh) * self.connection_cost_per_hh
+                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (new_connections/ num_people_per_hh) * self.connection_cost_per_hh
                 td_om_cost = td_investment_cost * self.om_of_td_lines * 1.125 if self.standalone else td_investment_cost * self.om_of_td_lines * 1.25
                 total_investment_cost = td_investment_cost + capital_investment
                 total_om_cost = td_om_cost + (self.capital_cost * 1.125 * self.om_costs * 1.125 * installed_capacity) if self.standalone else td_om_cost + (self.capital_cost * 1.25 * self.om_costs * 1.25 * installed_capacity)
@@ -423,7 +423,7 @@ class Technology:
                 lv_total_line_cost = self.lv_line_cost * total_lv_lines_length * 1.25 if self.standalone else self.lv_line_cost * total_lv_lines_length * 1.5
                 installed_capacity = peak_load / capacity_factor
                 capital_investment = installed_capacity * self.capital_cost * 1.25 if self.standalone else installed_capacity * self.capital_cost * 1.5
-                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (people / num_people_per_hh) * self.connection_cost_per_hh
+                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (new_connections/ num_people_per_hh) * self.connection_cost_per_hh
                 td_om_cost = td_investment_cost * self.om_of_td_lines * 1.25 if self.standalone else td_investment_cost * self.om_of_td_lines * 1.5
                 total_investment_cost = td_investment_cost + capital_investment
                 total_om_cost = td_om_cost + (self.capital_cost * 1.25 * self.om_costs * 1.25 * installed_capacity) if self.standalone else td_om_cost + (self.capital_cost * 1.5 * self.om_costs * 1.5 * installed_capacity)
@@ -434,7 +434,7 @@ class Technology:
                 lv_total_line_cost = self.lv_line_cost * total_lv_lines_length
                 installed_capacity = peak_load / capacity_factor
                 capital_investment = installed_capacity * self.capital_cost
-                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (people / num_people_per_hh) * self.connection_cost_per_hh
+                td_investment_cost = mv_total_line_cost + lv_total_line_cost + (new_connections/ num_people_per_hh) * self.connection_cost_per_hh
                 td_om_cost = td_investment_cost * self.om_of_td_lines
                 total_investment_cost = td_investment_cost + capital_investment
                 total_om_cost = td_om_cost + (self.capital_cost * self.om_costs * installed_capacity)
