@@ -1523,8 +1523,6 @@ class SettlementProcessor:
                     mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
                     if conflictlimit > 0:
                         elec_loop +=1
-                    # else:
-                    #     pass
             else:
                 still_looking = False
 
