@@ -1633,8 +1633,8 @@ class SettlementProcessor:
 
             iteration += 1
 
-            if elecrate < eleclimit:
-                mintraveldistance += 0.2
+            if elecrate < 0.9999 * eleclimit:
+                mintraveldistance += 0.1
                 if iteration > 100:
                     mintraveldistance += 0.4
                 if iteration > 200:
@@ -1645,8 +1645,8 @@ class SettlementProcessor:
                     mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
                     if conflictlimit > 0:
                         elec_loop +=1
-                else:
-                    pass
+                # else:
+                #     pass
             else:
                 still_looking = False
 
