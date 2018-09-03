@@ -1494,7 +1494,7 @@ class SettlementProcessor:
         else:
             still_looking = False
             print("The investment cap does not allow further electrification expansion in year:{}".format(year))
-        elec_loop = 0
+        elec_loop = 99
         while still_looking:
             if elec_loop <= max_loop:
                 self.df.loc[(self.df[SET_LCOE_GRID + "{}".format(year)] < 99) &
@@ -1511,8 +1511,8 @@ class SettlementProcessor:
 
             iteration += 1
 
-            if elecrate < eleclimit:
-                mintraveldistance += 0.2
+            if elecrate < 0.999 * eleclimit:
+                mintraveldistance += 0.1
                 if iteration > 100:
                     mintraveldistance += 0.4
                 if iteration > 200:
@@ -1523,8 +1523,8 @@ class SettlementProcessor:
                     mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
                     if conflictlimit > 0:
                         elec_loop +=1
-                else:
-                    pass
+                    # else:
+                    #     pass
             else:
                 still_looking = False
 
