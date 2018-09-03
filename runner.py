@@ -236,6 +236,7 @@ elif choice == 3:
 
         ### FIRST RUN - NO TIMESTEP
 
+
         time_step = 12
         year = 2030
         eleclimits = {2030: 1}
@@ -244,8 +245,8 @@ elif choice == 3:
         eleclimit = eleclimits[year]
         # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-        onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural,
-                                        num_people_per_hh_urban, time_step)
+        onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
+
 
         onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                                           sa_diesel_calc, year, start_year, end_year, time_step)
@@ -270,6 +271,8 @@ elif choice == 3:
         yearsofanalysis = [2023, 2030]
         eleclimits = {2023: 0.7, 2030: 1}
         time_steps = {2023: 5, 2030: 7}
+
+
 
         # This is used in the calculation of summaries at the end
 
@@ -299,7 +302,7 @@ elif choice == 3:
             time_step = time_steps[year]
             #investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-            onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step)
+            onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
 
             onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, year, start_year, end_year, time_step)
 
