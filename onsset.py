@@ -1511,12 +1511,12 @@ class SettlementProcessor:
 
             iteration += 1
 
-            if elecrate < 0.999 * eleclimit:
-                mintraveldistance += 0.1
+            if elecrate < 0.9999 * eleclimit:
+                mintraveldistance += 0.05
                 if iteration > 100:
-                    mintraveldistance += 0.4
+                    mintraveldistance += 0.05
                 if iteration > 200:
-                    mintraveldistance += 0.9
+                    mintraveldistance += 0.95
                 if iteration > 300:
                     iteration = 0
                     conflictlimit += 1
