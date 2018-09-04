@@ -302,7 +302,7 @@ class Technology:
                                  (1 + self.existing_grid_cost_ratio * elec_loop) * additional_mv_line_length * (
                                          (self.mv_line_cost * conf_grid_pen[conf_status]) * (
                                              1 + self.mv_increase_rate) ** ((additional_mv_line_length / 5) - 1))
-            td_investment_cost = td_investment_cost * grid_pen_ratio
+            td_investment_cost = td_investment_cost * grid_penalty_ratio
             td_om_cost = td_investment_cost * self.om_of_td_lines
 
             total_investment_cost = td_investment_cost
