@@ -2,3 +2,4 @@
 *.xml
 *.pyc
 __pycache__/onsset.cpython-35.pyc
+.idea/workspace.xml
