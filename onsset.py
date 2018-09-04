@@ -86,6 +86,11 @@ SET_MIN_OFFGRID_CODE = "Off_Grid_Code"
 SET_ELEC_FINAL_CODE = "FinalElecCode"
 SET_DIST_TO_TRANS = "TransformerDist"
 SET_TOTAL_ENERGY_PER_CELL = "TotalEnergyPerCell"  # all previous + current timestep
+SET_RESIDENTIAL_DEMAND = "ResidentialDemand"
+SET_AGRI_DEMAND = "AgriDemand"
+SET_HEALTH_DEMAND = "HealthDemand"
+SET_EDU_DEMAND = "EducationDemand"
+SET_COMMERCIAL_DEMAND = "CommercialDemand"
 
 
 # Columns in the specs file must match these exactly
@@ -1106,23 +1111,67 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
                     SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
+        logging.info('Calculating electricity demand for productive uses')
+        # Residential demand
+        self.df.loc[self.df[SET_URBAN] == 0, SET_RESIDENTIAL_DEMAND + "{}".format(year)] = \
+            energy_per_pp_rural * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+        self.df.loc[self.df[SET_URBAN] == 1, SET_RESIDENTIAL_DEMAND + "{}".format(year)] = \
+            energy_per_pp_urban * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+
+        # Education mock-up
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
+                    SET_EDU_DEMAND + "{}".format(year)] = 0.15 * self.df[SET_NEW_CONNECTIONS + "{}".format(year)] * 0
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+                    SET_EDU_DEMAND + "{}".format(year)] = 0.15 * self.df[SET_POP + "{}".format(year)] * 0
+
+        # Health mock-up
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
+                    SET_HEALTH_DEMAND + "{}".format(year)] = 0.2 * self.df[SET_NEW_CONNECTIONS + "{}".format(year)] * 0
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+                    SET_HEALTH_DEMAND + "{}".format(year)] = 0.2 * self.df[SET_POP + "{}".format(year)] * 0
+
+        # Commercial mock-up
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
+                    SET_COMMERCIAL_DEMAND + "{}".format(year)] = 0.2 * self.df[SET_NEW_CONNECTIONS + "{}".format(year)] * 0
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+                    SET_COMMERCIAL_DEMAND + "{}".format(year)] = 0.2 * self.df[SET_POP + "{}".format(year)] * 0
+
+        # Agri mock-up
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
+                    SET_AGRI_DEMAND + "{}".format(year)] = 0
+        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+                    SET_AGRI_DEMAND + "{}".format(year)] = 0
+
         logging.info('Setting electrification demand as per target per year')
 
         # Define if a settlement is Urban or Rural
         self.df.loc[self.df[SET_URBAN] == 0, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_rural
         self.df.loc[self.df[SET_URBAN] == 1, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
 
-        self.df.loc[self.df[SET_URBAN] == 0, SET_ENERGY_PER_CELL + "{}".format(year)] = \
+        self.df.loc[self.df[SET_URBAN] == 0, SET_RESIDENTIAL_DEMAND + "{}".format(year)] = \
             energy_per_pp_rural * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
-        self.df.loc[self.df[SET_URBAN] == 1, SET_ENERGY_PER_CELL + "{}".format(year)] = \
+        self.df.loc[self.df[SET_URBAN] == 1, SET_RESIDENTIAL_DEMAND + "{}".format(year)] = \
             energy_per_pp_urban * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+
+        self.df[SET_ENERGY_PER_CELL + "{}".format(year)] = self.df[SET_RESIDENTIAL_DEMAND + "{}".format(year)] + \
+            self.df[SET_COMMERCIAL_DEMAND + "{}".format(year)] + \
+            self.df[SET_EDU_DEMAND + "{}".format(year)] + \
+            self.df[SET_HEALTH_DEMAND + "{}".format(year)] + \
+            self.df[SET_AGRI_DEMAND + "{}".format(year)]
 
         if year - time_step == start_year:
             self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
-                energy_per_pp_rural * self.df[SET_POP + "{}".format(year)]
+                energy_per_pp_rural * self.df[SET_POP + "{}".format(year)] + \
+                self.df[SET_COMMERCIAL_DEMAND + "{}".format(year)] + \
+                self.df[SET_EDU_DEMAND + "{}".format(year)] + \
+                self.df[SET_HEALTH_DEMAND + "{}".format(year)] + \
+                self.df[SET_AGRI_DEMAND + "{}".format(year)]
             self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = \
-                energy_per_pp_urban * self.df[SET_POP + "{}".format(year)]
-            # self.df[SET_TOTAL_ENERGY_PER_CELL] = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
+                energy_per_pp_urban * self.df[SET_POP + "{}".format(year)] + \
+                self.df[SET_COMMERCIAL_DEMAND + "{}".format(year)] + \
+                self.df[SET_EDU_DEMAND + "{}".format(year)] + \
+                self.df[SET_HEALTH_DEMAND + "{}".format(year)] + \
+                self.df[SET_AGRI_DEMAND + "{}".format(year)]
         else:
             self.df[SET_TOTAL_ENERGY_PER_CELL] += self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
 
