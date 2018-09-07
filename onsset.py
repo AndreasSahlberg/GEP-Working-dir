@@ -202,7 +202,9 @@ class Technology:
 
     def get_lcoe(self, energy_per_cell, people, num_people_per_hh, start_year, end_year, new_connections, 
                  total_energy_per_cell, prev_code, conf_status=0, additional_mv_line_length=0, capacity_factor=0, 
-                 grid_penalty_ratio=1, mv_line_length=0, travel_hours=0, elec_loop=0, get_investment_cost=False):
+                 grid_penalty_ratio=1, mv_line_length=0, travel_hours=0, elec_loop=0, get_investment_cost=False,
+                 get_investment_cost_lv=False, get_investment_cost_mv=False, get_investment_cost_hv=False,
+                 get_investment_cost_transformer=False, get_investment_cost_connection=False):
         """
         Calculates the LCOE depending on the parameters. Optionally calculates the investment cost instead.
 
@@ -381,6 +383,20 @@ class Technology:
         if get_investment_cost:
             discounted_investments = investments / discount_factor
             return np.sum(discounted_investments) + (self.grid_capacity_investment * peak_load)
+        elif get_investment_cost_lv:
+            return total_lv_lines_length * (self.lv_line_cost * conf_grid_pen[conf_status])
+        elif get_investment_cost_mv:
+            return total_length_of_lines * (self.mv_line_cost * conf_grid_pen[conf_status]) * \
+                                 (1 + self.existing_grid_cost_ratio * elec_loop) + (1 + self.existing_grid_cost_ratio * elec_loop) * additional_mv_line_length * (
+                                         (self.mv_line_cost * conf_grid_pen[conf_status]) * (
+                                             1 + self.mv_increase_rate) ** ((additional_mv_line_length / 5) - 1))
+        elif get_investment_cost_hv:
+            return hv_lines_total_length * (self.hv_line_cost * conf_grid_pen[conf_status]) * \
+                                 (1 + self.existing_grid_cost_ratio * elec_loop)
+        elif get_investment_cost_transformer:
+            return num_transformers * self.hv_lv_transformer_cost
+        elif get_investment_cost_connection:
+            return (new_connections / num_people_per_hh) * self.connection_cost_per_hh
         else:
             discounted_costs = (investments + operation_and_maintenance + fuel - salvage) / discount_factor
             discounted_generation = el_gen / discount_factor
@@ -1567,11 +1583,154 @@ class SettlementProcessor:
         logging.info('Calculate investment cost')
         self.df[SET_INVESTMENT_COST + "{}".format(year)] = self.df.apply(res_investment_cost, axis=1)
 
+        def res_investment_cost_lv(row):
+            min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
+            if min_code == 1:
+                return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+                                          start_year=year - timestep,
+                                          end_year=end_year,
+                                          people=row[SET_POP + "{}".format(year)],
+                                          new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                          prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+                                          num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+                                          conf_status=row[SET_CONFLICT],
+                                          additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
+                                          elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
+                                          get_investment_cost_lv=True)
+            else:
+                return 0
+
+        logging.info('Calculate LV investment cost')
+        self.df['InvestmentCostLV' + "{}".format(year)] = self.df.apply(res_investment_cost_lv, axis=1)
+
+        def res_investment_cost_mv(row):
+            min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
+            if min_code == 1:
+                return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+                                          start_year=year - timestep,
+                                          end_year=end_year,
+                                          people=row[SET_POP + "{}".format(year)],
+                                          new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                          prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+                                          num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+                                          conf_status=row[SET_CONFLICT],
+                                          additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
+                                          elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
+                                          get_investment_cost_mv=True)
+            else:
+                return 0
+
+        logging.info('Calculate MV investment cost')
+        self.df['InvestmentCostMV' + "{}".format(year)] = self.df.apply(res_investment_cost_mv, axis=1)
+
+        def res_investment_cost_hv(row):
+            min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
+            if min_code == 1:
+                return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+                                          start_year=year - timestep,
+                                          end_year=end_year,
+                                          people=row[SET_POP + "{}".format(year)],
+                                          new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                          prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+                                          num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+                                          conf_status=row[SET_CONFLICT],
+                                          additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
+                                          elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
+                                          get_investment_cost_hv=True)
+            else:
+                return 0
+
+        logging.info('Calculate HV investment cost')
+        self.df['InvestmentCostHV' + "{}".format(year)] = self.df.apply(res_investment_cost_hv, axis=1)
+
+        def res_investment_cost_transformer(row):
+            min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
+            if min_code == 1:
+                return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+                                          start_year=year - timestep,
+                                          end_year=end_year,
+                                          people=row[SET_POP + "{}".format(year)],
+                                          new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                          prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+                                          num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+                                          conf_status=row[SET_CONFLICT],
+                                          additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
+                                          elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
+                                          get_investment_cost_transformer=True)
+            else:
+                return 0
+
+        logging.info('Calculate transformer investment cost')
+        self.df['InvestmentCostTransformer' + "{}".format(year)] = self.df.apply(res_investment_cost_transformer, axis=1)
+
+        def res_investment_cost_connection(row):
+            min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
+            if min_code == 1:
+                return grid_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+                                          start_year=year - timestep,
+                                          end_year=end_year,
+                                          people=row[SET_POP + "{}".format(year)],
+                                          new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+                                          total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+                                          prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+                                          num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+                                          conf_status=row[SET_CONFLICT],
+                                          additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
+                                          elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
+                                          get_investment_cost_connection=True)
+            else:
+                return 0
+
+        logging.info('Calculate connection investment cost')
+        self.df['InvestmentCostConnection' + "{}".format(year)] = self.df.apply(res_investment_cost_connection, axis=1)
+
+        def infrastructure_cost(row):
+            if row[SET_NEW_CONNECTIONS + "{}".format(year)] > 0 and row[SET_ELEC_FINAL_CODE + "{}".format(year)] == 1:
+                return (row[SET_INVESTMENT_COST + "{}".format(year)] + row['InvestmentCostLV' + "{}".format(year)]
+                        + row['InvestmentCostMV' + "{}".format(year)] + row['InvestmentCostHV' + "{}".format(year)]
+                        + row['InvestmentCostTransformer' + "{}".format(year)] +
+                        row['InvestmentCostConnection' + "{}".format(year)])/row[SET_NEW_CONNECTIONS + "{}".format(year)]
+            else:
+                return 0
+
+        logging.info('Calculating average infrastructure cost for grid connection')
+        self.df['InfrastructureCapitaCost' + "{}".format(year)] = self.df.apply(infrastructure_cost, axis=1)
+
         # Update the actual electrification column with results
         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
 
     def delete_redundant_columns(self, year):
         self.df['ResultsNoTimestep'] = self.df[SET_ELEC_FINAL_CODE + "{}".format(year)]
+        del self.df[SET_ELEC_FINAL_CODE + "{}".format(year)]
+        del self.df[SET_LCOE_MG_HYDRO + "{}".format(year)]
+        del self.df[SET_LCOE_MG_PV + "{}".format(year)]
+        del self.df[SET_LCOE_MG_WIND + "{}".format(year)]
+        del self.df[SET_LCOE_MG_DIESEL + "{}".format(year)]
+        del self.df[SET_LCOE_SA_DIESEL + "{}".format(year)]
+        del self.df[SET_LCOE_SA_PV + "{}".format(year)]
+        del self.df[SET_MIN_OFFGRID + "{}".format(year)]
+        del self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)]
+        del self.df[SET_MIN_OFFGRID_CODE + "{}".format(year)]
+        del self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)]
+        del self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)]
+        del self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)]
+        del self.df[SET_LCOE_GRID + "{}".format(year)]
+        del self.df[SET_MIN_GRID_DIST + "{}".format(year)]
+        del self.df[SET_ELEC_ORDER + "{}".format(year)]
+        del self.df[SET_MIN_OVERALL + "{}".format(year)]
+        del self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)]
+        del self.df[SET_MIN_OVERALL_CODE + "{}".format(year)]
+        del self.df[SET_LIMIT + "{}".format(year)]
+        del self.df[SET_ELEC_FINAL_GRID + "{}".format(year)]
+        del self.df[SET_ELEC_FINAL_OFFGRID + "{}".format(year)]
+        del self.df[SET_NEW_CAPACITY + "{}".format(year)]
+        del self.df[SET_INVESTMENT_COST + "{}".format(year)]
+        del self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+        del self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
 
     def calc_summaries(self, df_summary, sumtechs, year):
 
