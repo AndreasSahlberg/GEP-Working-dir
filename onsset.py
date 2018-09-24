@@ -967,6 +967,7 @@ class SettlementProcessor:
         loops = 1
 
         for unelec in unelectrified:
+            grid_lcoe = 99
             if year >= grid_reach[unelec]:
                 consumption = enerperhh[unelec]  # kWh/year
                 average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
@@ -1028,6 +1029,7 @@ class SettlementProcessor:
             changes = []
             if len(elec_nodes2) > 0:
                 for unelec in unelectrified:
+                    grid_lcoe = 99
                     if year >= grid_reach[unelec]:
                         consumption = enerperhh[unelec]  # kWh/year
                         average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
@@ -1690,10 +1692,15 @@ class SettlementProcessor:
 
         def infrastructure_cost(row):
             if row[SET_NEW_CONNECTIONS + "{}".format(year)] > 0 and row[SET_ELEC_FINAL_CODE + "{}".format(year)] == 1:
-                return (row[SET_INVESTMENT_COST + "{}".format(year)] + row['InvestmentCostLV' + "{}".format(year)]
+                return (row['InvestmentCostLV' + "{}".format(year)]
                         + row['InvestmentCostMV' + "{}".format(year)] + row['InvestmentCostHV' + "{}".format(year)]
                         + row['InvestmentCostTransformer' + "{}".format(year)] +
-                        row['InvestmentCostConnection' + "{}".format(year)])/row[SET_NEW_CONNECTIONS + "{}".format(year)]
+                        row['InvestmentCostConnection' + "{}".format(year)])/(row[SET_NEW_CONNECTIONS + "{}".format(year)] / row[SET_NUM_PEOPLE_PER_HH])
+                # return (row[SET_INVESTMENT_COST + "{}".format(year)] + row['InvestmentCostLV' + "{}".format(year)]
+                #         + row['InvestmentCostMV' + "{}".format(year)] + row['InvestmentCostHV' + "{}".format(year)]
+                #         + row['InvestmentCostTransformer' + "{}".format(year)] +
+                #         row['InvestmentCostConnection' + "{}".format(year)]) / row[
+                #            SET_NEW_CONNECTIONS + "{}".format(year)]
             else:
                 return 0
 
