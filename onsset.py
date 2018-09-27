@@ -695,103 +695,117 @@ class SettlementProcessor:
             self.df['GridDistCalibElec'] = self.df['CurrentHVLineDist']
             priority = 2
 
-        while True:
+        condition = 0
+        while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
+            urban_electrified = 0.159853988426699 * 17573607 * 0.487
+            # urban_electrified = urban_electrified_modelled * self.df[SET_POP_CALIB].sum() * urban_elec_access
+            rural_electrified = (1 - 0.159853988426699) * 17573607 * 0.039
+            # rural_electrified = (1 - urban_electrified_modelled) * self.df[SET_POP_CALIB].sum() * rural_elec_access
             if priority == 1:
-                self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
-                                                          1
-                                                          if ((row['GridDistCalibElec'] < max_grid_dist and
-                                                               (row[SET_NIGHT_LIGHTS] > 1 and
-                                                               row[SET_POP_CALIB] > pop_cutoff2) or
-                                                               (row[SET_NIGHT_LIGHTS] > min_night_lights or
-                                                                row[SET_POP_CALIB] > pop_cutoff)
-                                                               ))
-                                                          else 0,
-                                                          axis=1)
-            elif priority == 2:
-                self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
-                                                          1
-                                                          if ((row[SET_NIGHT_LIGHTS] > min_night_lights or
-                                                               row[SET_POP_CALIB] > pop_cutoff and
-                                                               row['GridDistCalibElec'] < max_grid_dist and
-                                                               row[SET_ROAD_DIST] < max_road_dist))
-                                                          or (row[SET_POP_CALIB] > pop_cutoff2 and
-                                                                 (row['GridDistCalibElec'] < grid_cutoff2 or
-                                                                  row[SET_ROAD_DIST] < road_cutoff2))
-                                                          else 0,
-                                                          axis=1)
-
-            # Get the calculated electrified ratio, and limit it to within reasonable boundaries
-            pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
-            elec_modelled = pop_elec / pop_tot
-
-            if elec_modelled == 0:
-                elec_modelled = 0.01
-            elif elec_modelled == 1:
-                elec_modelled = 0.99
-
-            if abs(elec_modelled - elec_actual) < accuracy:
-                break
-            elif not is_round_two:
-                min_night_lights = sorted([1, min_night_lights - min_night_lights * 2 *
-                                           (elec_actual - elec_modelled) / elec_actual, 10])[1]
-                if priority == 1:
-                    max_grid_dist = sorted([0.5, max_grid_dist + max_grid_dist * 2 *
-                                            (elec_actual - elec_modelled) / elec_actual, 10])[1]
-                else:
-                    max_grid_dist = sorted([5, max_grid_dist + max_grid_dist * 2 *
-                                            (elec_actual - elec_modelled) / elec_actual, 50])[1]
-                max_road_dist = sorted([0.5, max_road_dist + max_road_dist * 2 *
-                                        (elec_actual - elec_modelled) / elec_actual, 50])[1]
-            elif elec_modelled - elec_actual < 0:
-                pop_cutoff2 = sorted([0.01, pop_cutoff2 - pop_cutoff2 *
-                                      (elec_actual - elec_modelled) / elec_actual, 100000])[1]
-            elif elec_modelled - elec_actual > 0:
-                pop_cutoff = sorted([0.01, pop_cutoff - pop_cutoff * 0.5 *
-                                     (elec_actual - elec_modelled) / elec_actual, 10000])[1]
-
-            constraints = '{}{}{}{}{}'.format(pop_cutoff, min_night_lights, max_grid_dist, max_road_dist, pop_cutoff2)
-            if constraints in prev_vals and not is_round_two:
-                logging.info('Repeating myself, on to round two')
-                prev_vals = []
-                is_round_two = True
-            elif constraints in prev_vals and is_round_two:
-                logging.info('NOT SATISFIED: repeating myself')
-                print('2. Modelled electrification rate = {}'.format(elec_modelled))
-                if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
-                    count = 0
-                    is_round_two = False
-                    pop_cutoff = float(input('Enter value for pop_cutoff: '))
-                    min_night_lights = float(input('Enter value for min_night_lights: '))
-                    max_grid_dist = float(input('Enter value for max_grid_dist: '))
-                    max_road_dist = float(input('Enter value for max_road_dist: '))
-                    pop_cutoff2 = float(input('Enter value for pop_cutoff2: '))
-                else:
-                    break
+                # self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df[SET_NIGHT_LIGHTS] > 0.3) & (self.df[SET_POP_CALIB] > 100), SET_ELEC_CURRENT] = 1
+                # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
+                urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 1), SET_POP_CALIB].sum()) / urban_electrified
+                rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 0), SET_POP_CALIB].sum()) / rural_electrified
+                pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
+                elec_modelled = pop_elec / pop_tot
             else:
-                prev_vals.append(constraints)
+                self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
+                # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
+                urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
+                            self.df[SET_URBAN] == 1), SET_POP_CALIB].sum()) / urban_electrified
+                rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
+                            self.df[SET_URBAN] == 0), SET_POP_CALIB].sum()) / rural_electrified
+                pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
+                elec_modelled = pop_elec / pop_tot
+                # self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
+                #                                           1
+                #                                           if ((row[SET_NIGHT_LIGHTS] > min_night_lights or
+                #                                                row[SET_POP_CALIB] > pop_cutoff and
+                #                                                row['GridDistCalibElec'] < max_grid_dist and
+                #                                                row[SET_ROAD_DIST] < max_road_dist))
+                #                                           or (row[SET_POP_CALIB] > pop_cutoff2 and
+                #                                                  (row['GridDistCalibElec'] < grid_cutoff2 or
+                #                                                   row[SET_ROAD_DIST] < road_cutoff2))
+                #                                           else 0,
+                #                                           axis=1)
+                #
+                # # Get the calculated electrified ratio, and limit it to within reasonable boundaries
+                # pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
+                # elec_modelled = pop_elec / pop_tot
+                #
+                # if elec_modelled == 0:
+                #     elec_modelled = 0.01
+                # elif elec_modelled == 1:
+                #     elec_modelled = 0.99
+                #
+                # if abs(elec_modelled - elec_actual) < accuracy:
+                #     break
+                # elif not is_round_two:
+                #     min_night_lights = sorted([1, min_night_lights - min_night_lights * 2 *
+                #                                (elec_actual - elec_modelled) / elec_actual, 10])[1]
+                #     if priority == 1:
+                #         max_grid_dist = sorted([0.5, max_grid_dist + max_grid_dist * 2 *
+                #                                 (elec_actual - elec_modelled) / elec_actual, 10])[1]
+                #     else:
+                #         max_grid_dist = sorted([5, max_grid_dist + max_grid_dist * 2 *
+                #                                 (elec_actual - elec_modelled) / elec_actual, 50])[1]
+                #     max_road_dist = sorted([0.5, max_road_dist + max_road_dist * 2 *
+                #                             (elec_actual - elec_modelled) / elec_actual, 50])[1]
+                # elif elec_modelled - elec_actual < 0:
+                #     pop_cutoff2 = sorted([0.01, pop_cutoff2 - pop_cutoff2 *
+                #                           (elec_actual - elec_modelled) / elec_actual, 100000])[1]
+                # elif elec_modelled - elec_actual > 0:
+                #     pop_cutoff = sorted([0.01, pop_cutoff - pop_cutoff * 0.5 *
+                #                          (elec_actual - elec_modelled) / elec_actual, 10000])[1]
+                #
+                # constraints = '{}{}{}{}{}'.format(pop_cutoff, min_night_lights, max_grid_dist, max_road_dist, pop_cutoff2)
+                # if constraints in prev_vals and not is_round_two:
+                #     logging.info('Repeating myself, on to round two')
+                #     prev_vals = []
+                #     is_round_two = True
+                # elif constraints in prev_vals and is_round_two:
+                #     logging.info('NOT SATISFIED: repeating myself')
+                #     print('2. Modelled electrification rate = {}'.format(elec_modelled))
+                #     if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
+                #         count = 0
+                #         is_round_two = False
+                #         pop_cutoff = float(input('Enter value for pop_cutoff: '))
+                #         min_night_lights = float(input('Enter value for min_night_lights: '))
+                #         max_grid_dist = float(input('Enter value for max_grid_dist: '))
+                #         max_road_dist = float(input('Enter value for max_road_dist: '))
+                #         pop_cutoff2 = float(input('Enter value for pop_cutoff2: '))
+                #     else:
+                #         break
+                # else:
+                #     prev_vals.append(constraints)
+                #
+                # if count >= max_iterations_one and not is_round_two:
+                #     logging.info('Got to {}, on to round two'.format(max_iterations_one))
+                #     is_round_two = True
+                # elif count >= max_iterations_two and is_round_two:
+                #     logging.info('NOT SATISFIED: Got to {}'.format(max_iterations_two))
+                #     print('2. Modelled electrification rate = {}'.format(elec_modelled))
+                #     if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
+                #         count = 0
+                #         is_round_two = False
+                #         pop_cutoff = int(input('Enter value for pop_cutoff: '))
+                #         min_night_lights = int(input('Enter value for min_night_lights: '))
+                #         max_grid_dist = int(input('Enter value for max_grid_dist: '))
+                #         max_road_dist = int(input('Enter value for max_road_dist: '))
+                #         pop_cutoff2 = int(input('Enter value for pop_cutoff2: '))
+                #     else:
+                #         break
+                #
+                # count += 1
+                # rural_elec_ratio = 1
+                # urban_elec_ratio = 1
 
-            if count >= max_iterations_one and not is_round_two:
-                logging.info('Got to {}, on to round two'.format(max_iterations_one))
-                is_round_two = True
-            elif count >= max_iterations_two and is_round_two:
-                logging.info('NOT SATISFIED: Got to {}'.format(max_iterations_two))
-                print('2. Modelled electrification rate = {}'.format(elec_modelled))
-                if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
-                    count = 0
-                    is_round_two = False
-                    pop_cutoff = int(input('Enter value for pop_cutoff: '))
-                    min_night_lights = int(input('Enter value for min_night_lights: '))
-                    max_grid_dist = int(input('Enter value for max_grid_dist: '))
-                    max_road_dist = int(input('Enter value for max_road_dist: '))
-                    pop_cutoff2 = int(input('Enter value for pop_cutoff2: '))
-                else:
-                    break
+            logging.info('The modelled electrification rate achieved is {}. '
+                         'If this is not acceptable please revise this part of the algorithm'.format(elec_modelled))
+            condition = 1
 
-            count += 1
-
-        logging.info('The modelled electrification rate achieved is {}. '
-                     'If this is not acceptable please revise this part of the algorithm'.format(elec_modelled))
 
         self.df[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] = \
             self.df.apply(lambda row: 1 if row[SET_ELEC_CURRENT] == 1 else 0, axis=1)
@@ -802,7 +816,7 @@ class SettlementProcessor:
         self.df[SET_ELEC_FINAL_CODE + "{}".format(start_year)] = \
             self.df.apply(lambda row: 1 if row[SET_ELEC_CURRENT] == 1 else 99, axis=1)
 
-        return min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2
+        return min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2, rural_elec_ratio, urban_elec_ratio
 
     @staticmethod
     def separate_elec_status(elec_status):

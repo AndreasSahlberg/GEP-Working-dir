@@ -78,7 +78,7 @@ elif choice == 2:
         urban_cutoff, urban_modelled = onsseter.calibrate_pop_and_urban(pop_actual, pop_future, urban_current,
                                                                         urban_future, urban_cutoff, start_year, end_year, time_step)
 
-        min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2 = \
+        min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2, rural_elec_ratio, urban_elec_ratio = \
             onsseter.elec_current_and_future(elec_actual, pop_cutoff, dist_to_trans, min_night_lights, max_grid_dist,
                                              max_road_dist, pop_tot, pop_cutoff2, start_year)
 
@@ -92,6 +92,9 @@ elif choice == 2:
         specs.loc[country, SPE_ELEC_MODELLED] = elec_modelled
         specs.loc[country, SPE_POP_CUTOFF1] = pop_cutoff
         specs.loc[country, SPE_POP_CUTOFF2] = pop_cutoff2
+        specs.loc[country, 'rural_elec_ratio'] = rural_elec_ratio
+        specs.loc[country, 'urban_elec_ratio'] = urban_elec_ratio
+
 
         try:
             specs.to_excel(specs_path)
