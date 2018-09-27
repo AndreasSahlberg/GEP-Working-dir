@@ -102,16 +102,16 @@ elif choice == 2:
 
 elif choice == 3:
 
-    wb_tiers_all = {1: 7.738, 2: 43.8, 3: 160.6, 4: 423.4, 5: 598.6}
-    print("""\nWorld Bank Tiers of Electricity Access
-          1: {} kWh/person/year
-          2: {} kWh/person/year
-          3: {} kWh/person/year
-          4: {} kWh/person/year
-          5: {} kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
-                                          wb_tiers_all[4], wb_tiers_all[5]))
-    wb_tier_urban = int(input('Enter the tier number for urban: '))
-    wb_tier_rural = int(input('Enter the tier number for rural: '))
+    # wb_tiers_all = {1: 7.738, 2: 43.8, 3: 160.6, 4: 423.4, 5: 598.6}
+    # print("""\nWorld Bank Tiers of Electricity Access
+    #       1: {} kWh/person/year
+    #       2: {} kWh/person/year
+    #       3: {} kWh/person/year
+    #       4: {} kWh/person/year
+    #       5: {} kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
+    #                                       wb_tiers_all[4], wb_tiers_all[5]))
+    # wb_tier_urban = int(input('Enter the tier number for urban: '))
+    # wb_tier_rural = int(input('Enter the tier number for rural: '))
 
     diesel_high = True if 'y' in input('Use high diesel value? <y/n> ') else False
     diesel_tag = 'high' if diesel_high else 'low'
@@ -126,7 +126,7 @@ elif choice == 3:
 
     for country in countries:
         # create country_specs here
-        print(' --- {} --- {} --- {} --- '.format(country, wb_tier_urban, diesel_tag))
+        print(' --- {} --- {} --- '.format(country, diesel_tag))
         settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
         settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
         summary_csv = output_dir + 'summary.csv'
@@ -143,8 +143,8 @@ elif choice == 3:
         num_people_per_hh_rural = float(specs[SPE_NUM_PEOPLE_PER_HH_RURAL][country])
         num_people_per_hh_urban = float(specs[SPE_NUM_PEOPLE_PER_HH_URBAN][country])
         max_grid_extension_dist = float(specs[SPE_MAX_GRID_EXTENSION_DIST][country])
-        energy_per_pp_rural = wb_tiers_all[wb_tier_rural]
-        energy_per_pp_urban = wb_tiers_all[wb_tier_urban]
+        # energy_per_pp_rural = wb_tiers_all[wb_tier_rural]
+        # energy_per_pp_urban = wb_tiers_all[wb_tier_urban]
         mg_pv_cap_cost = specs.loc[country, SPE_CAP_COST_MG_PV]
         grid_cap_gen_limit = specs.loc[country, 'NewGridGenerationCapacityTimestepLimit']
         #eleclimit = specs[SPE_ELEC_LIMIT][country]
@@ -245,7 +245,7 @@ elif choice == 3:
         eleclimit = eleclimits[year]
         # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-        onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
+        onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
 
 
         onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
@@ -302,7 +302,7 @@ elif choice == 3:
             time_step = time_steps[year]
             #investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-            onsseter.set_scenario_variables(energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
+            onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
 
             onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, year, start_year, end_year, time_step)
 

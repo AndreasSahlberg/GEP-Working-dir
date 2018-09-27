@@ -40,7 +40,6 @@ SET_SUBSTATION_DIST = 'SubstationDist'
 SET_ELEVATION = 'Elevation'  # in metres
 SET_SLOPE = 'Slope'  # in degrees
 SET_LAND_COVER = 'LandCover'
-SET_SOLAR_RESTRICTION = 'SolarRestriction'
 SET_ROAD_DIST_CLASSIFIED = 'RoadDistClassified'
 SET_SUBSTATION_DIST_CLASSIFIED = 'SubstationDistClassified'
 SET_ELEVATION_CLASSIFIED = 'ElevationClassified'
@@ -426,13 +425,12 @@ class SettlementProcessor:
         self.df[SET_ELEVATION] = pd.to_numeric(self.df[SET_ELEVATION], errors='coerce')
         self.df[SET_SLOPE] = pd.to_numeric(self.df[SET_SLOPE], errors='coerce')
         self.df[SET_LAND_COVER] = pd.to_numeric(self.df[SET_LAND_COVER], errors='coerce')
-        self.df[SET_GRID_DIST_CURRENT] = pd.to_numeric(self.df[SET_GRID_DIST_CURRENT], errors='coerce')
-        self.df[SET_GRID_DIST_PLANNED] = pd.to_numeric(self.df[SET_GRID_DIST_PLANNED], errors='coerce')
+        # self.df[SET_GRID_DIST_CURRENT] = pd.to_numeric(self.df[SET_GRID_DIST_CURRENT], errors='coerce')
+        # self.df[SET_GRID_DIST_PLANNED] = pd.to_numeric(self.df[SET_GRID_DIST_PLANNED], errors='coerce')
         self.df[SET_SUBSTATION_DIST] = pd.to_numeric(self.df[SET_SUBSTATION_DIST], errors='coerce')
         self.df[SET_ROAD_DIST] = pd.to_numeric(self.df[SET_ROAD_DIST], errors='coerce')
         self.df[SET_HYDRO_DIST] = pd.to_numeric(self.df[SET_HYDRO_DIST], errors='coerce')
         self.df[SET_HYDRO] = pd.to_numeric(self.df[SET_HYDRO], errors='coerce')
-        self.df[SET_SOLAR_RESTRICTION] = pd.to_numeric(self.df[SET_SOLAR_RESTRICTION], errors='coerce')
 
         logging.info('Add column with country name')
         self.df['Country'] = country
@@ -443,19 +441,6 @@ class SettlementProcessor:
         logging.info('Sort by country, Y and X')
         self.df.sort_values(by=[SET_COUNTRY, SET_Y, SET_X], inplace=True)
 
-        # logging.info('Add columns with location in degrees')
-        # project = Proj('+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
-        #
-        # def get_x(row):
-        #     x, y = project(row[SET_X] * 1000, row[SET_Y] * 1000, inverse=True)
-        #     return x
-        #
-        # def get_y(row):
-        #     x, y = project(row[SET_X] * 1000, row[SET_Y] * 1000, inverse=True)
-        #     return y
-        #
-        # self.df[SET_X_DEG] = self.df.apply(get_x, axis=1)
-        # self.df[SET_Y_DEG] = self.df.apply(get_y, axis=1)
 
     def grid_penalties(self):
         """
@@ -700,20 +685,41 @@ class SettlementProcessor:
         max_iterations_one = 30
         max_iterations_two = 60
 
+        if max(self.df['TransformerDist']) > 0:
+            self.df['GridDistCalibElec'] = self.df['TransformerDist']
+            priority = 1
+        elif max(self.df['CurrentMVLineDist']) > 0:
+            self.df['GridDistCalibElec'] = self.df['CurrentMVLineDist']
+            priority = 1
+        else:
+            self.df['GridDistCalibElec'] = self.df['CurrentHVLineDist']
+            priority = 2
+
         while True:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
-            self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
-                                                      1
-                                                      if (  # row[SET_DIST_TO_TRANS] < dist_to_trans and
-                                                          (row[SET_NIGHT_LIGHTS] > min_night_lights or
-                                                           row[SET_POP_CALIB] > pop_cutoff and
-                                                           row[SET_GRID_DIST_CURRENT] < max_grid_dist and
-                                                           row[SET_ROAD_DIST] < max_road_dist))
-                                                      or (row[SET_POP_CALIB] > pop_cutoff2 and
-                                                          (row[SET_GRID_DIST_CURRENT] < grid_cutoff2 or
-                                                           row[SET_ROAD_DIST] < road_cutoff2))
-                                                      else 0,
-                                                      axis=1)
+            if priority == 1:
+                self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
+                                                          1
+                                                          if ((row['GridDistCalibElec'] < max_grid_dist and
+                                                               (row[SET_NIGHT_LIGHTS] > 1 and
+                                                               row[SET_POP_CALIB] > pop_cutoff2) or
+                                                               (row[SET_NIGHT_LIGHTS] > min_night_lights or
+                                                                row[SET_POP_CALIB] > pop_cutoff)
+                                                               ))
+                                                          else 0,
+                                                          axis=1)
+            elif priority == 2:
+                self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
+                                                          1
+                                                          if ((row[SET_NIGHT_LIGHTS] > min_night_lights or
+                                                               row[SET_POP_CALIB] > pop_cutoff and
+                                                               row['GridDistCalibElec'] < max_grid_dist and
+                                                               row[SET_ROAD_DIST] < max_road_dist))
+                                                          or (row[SET_POP_CALIB] > pop_cutoff2 and
+                                                                 (row['GridDistCalibElec'] < grid_cutoff2 or
+                                                                  row[SET_ROAD_DIST] < road_cutoff2))
+                                                          else 0,
+                                                          axis=1)
 
             # Get the calculated electrified ratio, and limit it to within reasonable boundaries
             pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
@@ -727,12 +733,14 @@ class SettlementProcessor:
             if abs(elec_modelled - elec_actual) < accuracy:
                 break
             elif not is_round_two:
-                dist_to_trans = sorted([2, dist_to_trans - dist_to_trans * 2 *
-                                        (elec_actual - elec_modelled) / elec_actual, 100])[1]
-                min_night_lights = sorted([5, min_night_lights - min_night_lights * 2 *
-                                           (elec_actual - elec_modelled) / elec_actual, 60])[1]
-                max_grid_dist = sorted([5, max_grid_dist + max_grid_dist * 2 *
-                                        (elec_actual - elec_modelled) / elec_actual, 50])[1]
+                min_night_lights = sorted([1, min_night_lights - min_night_lights * 2 *
+                                           (elec_actual - elec_modelled) / elec_actual, 10])[1]
+                if priority == 1:
+                    max_grid_dist = sorted([0.5, max_grid_dist + max_grid_dist * 2 *
+                                            (elec_actual - elec_modelled) / elec_actual, 10])[1]
+                else:
+                    max_grid_dist = sorted([5, max_grid_dist + max_grid_dist * 2 *
+                                            (elec_actual - elec_modelled) / elec_actual, 50])[1]
                 max_road_dist = sorted([0.5, max_road_dist + max_road_dist * 2 *
                                         (elec_actual - elec_modelled) / elec_actual, 50])[1]
             elif elec_modelled - elec_actual < 0:
@@ -753,7 +761,6 @@ class SettlementProcessor:
                 if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
                     count = 0
                     is_round_two = False
-                    dist_to_trans = float(input('Enter value for dist_to_trans: '))
                     pop_cutoff = float(input('Enter value for pop_cutoff: '))
                     min_night_lights = float(input('Enter value for min_night_lights: '))
                     max_grid_dist = float(input('Enter value for max_grid_dist: '))
@@ -773,7 +780,6 @@ class SettlementProcessor:
                 if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
                     count = 0
                     is_round_two = False
-                    dist_to_trans = int(input('Enter value for dist_to_trans: '))
                     pop_cutoff = int(input('Enter value for pop_cutoff: '))
                     min_night_lights = int(input('Enter value for min_night_lights: '))
                     max_grid_dist = int(input('Enter value for max_grid_dist: '))
@@ -1106,7 +1112,7 @@ class SettlementProcessor:
 
         self.df[SET_LCOE_GRID + "{}".format(year)], self.df[SET_MIN_GRID_DIST + "{}".format(year)], self.df[SET_ELEC_ORDER + "{}".format(year)] = self.elec_extension(grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit)
 
-    def set_scenario_variables(self, energy_per_pp_rural, energy_per_pp_urban, year, num_people_per_hh_rural,
+    def set_scenario_variables(self, year, num_people_per_hh_rural,
                                num_people_per_hh_urban, time_step, start_year):
         """
         Set the basic scenario parameters that differ based on urban/rural
@@ -1125,21 +1131,61 @@ class SettlementProcessor:
                     SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
         logging.info('Setting electrification demand as per target per year')
+        if max(self.df['PerCapitaDemand']) == 0:
+            wb_tiers_all = {1: 7.738, 2: 43.8, 3: 160.6, 4: 423.4, 5: 598.6}
+            print("""\nWorld Bank Tiers of Electricity Access
+                      1: {} kWh/person/year
+                      2: {} kWh/person/year
+                      3: {} kWh/person/year
+                      4: {} kWh/person/year
+                      5: {} kWh/person/year
+                      6: Customized kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
+                                                      wb_tiers_all[4], wb_tiers_all[5]))
+            wb_tier_urban = int(input('Enter the tier number for urban: '))
+            wb_tier_rural = int(input('Enter the tier number for rural: '))
+            if wb_tier_urban == 6:
+                wb_tier_urban = 'ResidentialDemandCustom'
+            if wb_tier_rural == 6:
+                wb_tier_rural = 'ResidentialDemandCustom'
 
-        # Define if a settlement is Urban or Rural
-        self.df.loc[self.df[SET_URBAN] == 0, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_rural
-        self.df.loc[self.df[SET_URBAN] == 1, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
+            self.df['PerCapitaDemand'] = 0
+
+            # Define if a settlement is Urban or Rural
+            self.df.loc[self.df[SET_URBAN] == 0, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_rural
+            self.df.loc[self.df[SET_URBAN] == 1, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
+
+            # Define per capita residential demand
+            # self.df['PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban)]
+            self.df.loc[self.df[SET_URBAN] == 0, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_rural)]
+            self.df.loc[self.df[SET_URBAN] == 1, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban)]
+
+            # Add commercial demand
+            agri = True if 'y' in input('Include agrcultural demand? <y/n> ') else False
+            if agri:
+                self.df['PerCapitaDemand'] += self.df['AgriDemand']
+
+            commercial = True if 'y' in input('Include commercial demand? <y/n> ') else False
+            if commercial:
+                self.df['PerCapitaDemand'] += self.df['CommercialDemand']
+
+            health = True if 'y' in input('Include health demand? <y/n> ') else False
+            if health:
+                self.df['PerCapitaDemand'] += self.df['HealthDemand']
+
+            edu = True if 'y' in input('Include educational demand? <y/n> ') else False
+            if edu:
+                self.df['PerCapitaDemand'] += self.df['EducationDemand']
 
         self.df.loc[self.df[SET_URBAN] == 0, SET_ENERGY_PER_CELL + "{}".format(year)] = \
-            energy_per_pp_rural * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+            self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 1, SET_ENERGY_PER_CELL + "{}".format(year)] = \
-            energy_per_pp_urban * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+            self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
         if year - time_step == start_year:
             self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
-                energy_per_pp_rural * self.df[SET_POP + "{}".format(year)]
+                self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
             self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = \
-                energy_per_pp_urban * self.df[SET_POP + "{}".format(year)]
+                self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
             # self.df[SET_TOTAL_ENERGY_PER_CELL] = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
         else:
             self.df[SET_TOTAL_ENERGY_PER_CELL] += self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
@@ -1151,7 +1197,7 @@ class SettlementProcessor:
         logging.info('Estimate year of grid reach')
         self.df[SET_GRID_REACH_YEAR] = \
             self.df.apply(lambda row: int(start_year +
-                                          row[SET_GRID_DIST_PLANNED] * row[SET_COMBINED_CLASSIFICATION] / gridspeed)
+                                          row['PlannedHVLineDist'] * row[SET_COMBINED_CLASSIFICATION] / gridspeed)
                           if row[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] == 0
                           else start_year,
                           axis=1)
@@ -1218,7 +1264,7 @@ class SettlementProcessor:
                                             num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
                                             conf_status=row[SET_CONFLICT],
                                             capacity_factor=row[SET_GHI] / HOURS_PER_YEAR)
-            if (row[SET_SOLAR_RESTRICTION] == 1 and row[SET_GHI] > 1000)
+            if row[SET_GHI] > 1000
             else 99, axis=1)
 
         logging.info('Calculate minigrid wind LCOE')
