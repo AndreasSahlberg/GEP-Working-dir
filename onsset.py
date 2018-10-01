@@ -435,6 +435,12 @@ class SettlementProcessor:
         logging.info('Add column with country name')
         self.df['Country'] = country
 
+        logging.info('Adding column "ElectrificationOrder"')
+        self.df['ElectrificationOrder'] = 0
+
+        # logging.info['Adding column for per capita demand']
+        # self.df['PerCapitaDemand'] = 0
+
         logging.info('Replace null values with zero')
         self.df.fillna(0, inplace=True)
 
@@ -606,32 +612,36 @@ class SettlementProcessor:
         Calibrate the actual current population, the urban split and forecast the future population
         """
 
-        # Calculate the ratio between the actual population and the total population from the GIS layer
         logging.info('Calibrate current population')
-        pop_ratio = pop_actual/self.df[SET_POP].sum()
         project_life = end_year - start_year
-
+        # Calculate the ratio between the actual population and the total population from the GIS layer
+        pop_ratio = pop_actual / self.df[SET_POP].sum()
         # And use this ratio to calibrate the population in a new column
         self.df[SET_POP_CALIB] = self.df.apply(lambda row: row[SET_POP] * pop_ratio, axis=1)
+        calibrate = False
+        if max(self.df[SET_URBAN]) == 2:
+            calibrate = True if 'n' in input('Use urban definition from GIS layer <y/n> (n=model calibration):') else False
+        else:
+            calibrate = True
 
-        # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
-        # Keep looping until it is satisfied or another break conditions is reached
-        logging.info('Calibrate urban split')
-        sorted_pop = self.df[SET_POP_CALIB].copy()
-        sorted_pop.sort_values(inplace=True)
-        urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
-        cumulative_urban_pop = 0
-        ii = 0
-        while cumulative_urban_pop < urban_pop_break:
-            cumulative_urban_pop += sorted_pop.iloc[ii]
-            ii += 1
-        urban_cutoff = sorted_pop.iloc[ii-1]
+        if calibrate:
+            # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
+            logging.info('Calibrate urban split')
+            sorted_pop = self.df[SET_POP_CALIB].copy()
+            sorted_pop.sort_values(inplace=True)
+            urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
+            cumulative_urban_pop = 0
+            ii = 0
+            while cumulative_urban_pop < urban_pop_break:
+                cumulative_urban_pop += sorted_pop.iloc[ii]
+                ii += 1
+            urban_cutoff = sorted_pop.iloc[ii-1]
 
-        # Assign the 1 (urban)/0 (rural) values to each cell
-        self.df[SET_URBAN] = self.df.apply(lambda row: 1 if row[SET_POP_CALIB] > urban_cutoff else 0, axis=1)
+            # Assign the 1 (urban)/0 (rural) values to each cell
+            self.df[SET_URBAN] = self.df.apply(lambda row: 1 if row[SET_POP_CALIB] > urban_cutoff else 0, axis=1)
 
         # Get the calculated urban ratio, and limit it to within reasonable boundaries
-        pop_urb = self.df.loc[self.df[SET_URBAN] == 1, SET_POP_CALIB].sum()
+        pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
         urban_modelled = pop_urb / pop_actual
 
         logging.info('The modelled urban ratio is {}. '
@@ -647,7 +657,7 @@ class SettlementProcessor:
         yearly_rural_growth_rate = rural_growth**(1/project_life)
 
         self.df[SET_POP_FUTURE] = self.df.apply(lambda row: row[SET_POP_CALIB] * urban_growth
-                                                if row[SET_URBAN] == 1
+                                                if row[SET_URBAN] > 0
                                                 else row[SET_POP_CALIB] * rural_growth,
                                                 axis=1)
 
@@ -658,7 +668,7 @@ class SettlementProcessor:
         for year in yearsofanalysis:
             self.df[SET_POP+"{}".format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] * 
                                                                (yearly_urban_growth_rate ** (time_step*factor))
-                                                               if row[SET_URBAN] == 1
+                                                               if row[SET_URBAN] > 0
                                                                else row[SET_POP_CALIB] * 
                                                                (yearly_rural_growth_rate ** (time_step * factor)), 
                                                                axis=1)
@@ -684,6 +694,7 @@ class SettlementProcessor:
         accuracy = 0.01
         max_iterations_one = 30
         max_iterations_two = 60
+        self.df[SET_ELEC_CURRENT] = 0
 
         if max(self.df['TransformerDist']) > 0:
             self.df['GridDistCalibElec'] = self.df['TransformerDist']
@@ -703,18 +714,18 @@ class SettlementProcessor:
             rural_electrified = (1 - 0.159853988426699) * 17573607 * 0.039
             # rural_electrified = (1 - urban_electrified_modelled) * self.df[SET_POP_CALIB].sum() * rural_elec_access
             if priority == 1:
-                # self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
-                self.df.loc[(self.df[SET_NIGHT_LIGHTS] > 0.3) & (self.df[SET_POP_CALIB] > 100), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
+                # self.df.loc[(self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
                 # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
-                urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 1), SET_POP_CALIB].sum()) / urban_electrified
-                rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 0), SET_POP_CALIB].sum()) / rural_electrified
+                urban_elec_ratio = urban_electrified / (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 0), SET_POP_CALIB].sum())
+                rural_elec_ratio = rural_electrified / (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 0), SET_POP_CALIB].sum())
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
                 elec_modelled = pop_elec / pop_tot
             else:
                 self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
                 # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
                 urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
-                            self.df[SET_URBAN] == 1), SET_POP_CALIB].sum()) / urban_electrified
+                            self.df[SET_URBAN] > 0), SET_POP_CALIB].sum()) / urban_electrified
                 rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
                             self.df[SET_URBAN] == 0), SET_POP_CALIB].sum()) / rural_electrified
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
@@ -955,7 +966,7 @@ class SettlementProcessor:
 
         urban_initially_electrified = sum(self.df.loc[
                                               (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (
-                                                          self.df[SET_URBAN] == 1)][
+                                                          self.df[SET_URBAN] > 0)][
                                               SET_ENERGY_PER_CELL + "{}".format(year)])
         rural_initially_electrified = sum(self.df.loc[
                                               (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (
@@ -1126,8 +1137,8 @@ class SettlementProcessor:
 
         self.df[SET_LCOE_GRID + "{}".format(year)], self.df[SET_MIN_GRID_DIST + "{}".format(year)], self.df[SET_ELEC_ORDER + "{}".format(year)] = self.elec_extension(grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit)
 
-    def set_scenario_variables(self, year, num_people_per_hh_rural,
-                               num_people_per_hh_urban, time_step, start_year):
+    def set_scenario_variables(self, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
+                               urban_elec_ratio, rural_elec_ratio):
         """
         Set the basic scenario parameters that differ based on urban/rural
         So that they are in the table and can be read directly to calculate LCOEs
@@ -1135,14 +1146,25 @@ class SettlementProcessor:
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
-
-        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
-                    SET_NEW_CONNECTIONS + "{}".format(year)] = \
-            (self.df[SET_POP + "{}".format(year)] - self.df[SET_POP + "{}".format(year - time_step)])
-        self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
-                    SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
-        self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
-                    SET_NEW_CONNECTIONS + "{}".format(year)] = 0
+        if year - time_step == start_year:
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] > 0),
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = \
+                (self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * self.df[SET_POP + "{}".format(year - time_step)])
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] == 0),
+                SET_NEW_CONNECTIONS + "{}".format(year)] = \
+                (self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * self.df[SET_POP + "{}".format(year - time_step)])
+            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
+            self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = 0
+        else:
+            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = \
+                (self.df[SET_POP + "{}".format(year)] - self.df[SET_POP + "{}".format(year - time_step)])
+            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
+            self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
         logging.info('Setting electrification demand as per target per year')
         if max(self.df['PerCapitaDemand']) == 0:
@@ -1155,9 +1177,19 @@ class SettlementProcessor:
                       5: {} kWh/person/year
                       6: Customized kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
                                                       wb_tiers_all[4], wb_tiers_all[5]))
-            wb_tier_urban = int(input('Enter the tier number for urban: '))
-            wb_tier_rural = int(input('Enter the tier number for rural: '))
-            if wb_tier_urban == 6:
+
+            if max(self.df[SET_URBAN]) == 2:
+                wb_tier_urban_centers = int(input('Enter the tier number for urban centers: '))
+                wb_tier_urban_clusters = int(input('Enter the tier number for urban clusters: '))
+                wb_tier_rural = int(input('Enter the tier number for rural: '))
+            else:
+                wb_tier_urban_clusters = int(input('Enter the tier number for urban: '))
+                wb_tier_rural = int(input('Enter the tier number for rural: '))
+                wb_tier_urban_centers = 5
+
+            if wb_tier_urban_centers == 6:
+                wb_tier_urban = 'ResidentialDemandCustom'
+            if wb_tier_urban_clusters == 6:
                 wb_tier_urban = 'ResidentialDemandCustom'
             if wb_tier_rural == 6:
                 wb_tier_rural = 'ResidentialDemandCustom'
@@ -1167,11 +1199,15 @@ class SettlementProcessor:
             # Define if a settlement is Urban or Rural
             self.df.loc[self.df[SET_URBAN] == 0, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_rural
             self.df.loc[self.df[SET_URBAN] == 1, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
+            self.df.loc[self.df[SET_URBAN] == 2, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
 
             # Define per capita residential demand
             # self.df['PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban)]
-            self.df.loc[self.df[SET_URBAN] == 0, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_rural)]
-            self.df.loc[self.df[SET_URBAN] == 1, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban)]
+            self.df.loc[self.df[SET_URBAN] == 0, 'PerCapitaDemand'] = self.df['ResidentialDemandTier' + str(wb_tier_rural)]
+            self.df.loc[self.df[SET_URBAN] == 1, 'PerCapitaDemand'] = self.df['ResidentialDemandTier' + str(wb_tier_urban_clusters)]
+            self.df.loc[self.df[SET_URBAN] == 2, 'PerCapitaDemand'] = self.df['ResidentialDemandTier' + str(wb_tier_urban_centers)]
+            # if max(self.df[SET_URBAN]) == 2:
+            #     self.df.loc[self.df[SET_URBAN] == 2, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban_center)]
 
             # Add commercial demand
             agri = True if 'y' in input('Include agrcultural demand? <y/n> ') else False
@@ -1194,11 +1230,15 @@ class SettlementProcessor:
             self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 1, SET_ENERGY_PER_CELL + "{}".format(year)] = \
             self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+        self.df.loc[self.df[SET_URBAN] == 2, SET_ENERGY_PER_CELL + "{}".format(year)] = \
+            self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
         if year - time_step == start_year:
             self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
                 self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
             self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = \
+                self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+            self.df.loc[self.df[SET_URBAN] == 2, SET_TOTAL_ENERGY_PER_CELL] = \
                 self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
             # self.df[SET_TOTAL_ENERGY_PER_CELL] = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
         else:

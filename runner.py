@@ -146,6 +146,8 @@ elif choice == 3:
         num_people_per_hh_rural = float(specs[SPE_NUM_PEOPLE_PER_HH_RURAL][country])
         num_people_per_hh_urban = float(specs[SPE_NUM_PEOPLE_PER_HH_URBAN][country])
         max_grid_extension_dist = float(specs[SPE_MAX_GRID_EXTENSION_DIST][country])
+        urban_elec_ratio = float(specs['rural_elec_ratio'][country])
+        rural_elec_ratio = float(specs['urban_elec_ratio'][country])
         # energy_per_pp_rural = wb_tiers_all[wb_tier_rural]
         # energy_per_pp_urban = wb_tiers_all[wb_tier_urban]
         mg_pv_cap_cost = specs.loc[country, SPE_CAP_COST_MG_PV]
@@ -248,7 +250,8 @@ elif choice == 3:
         eleclimit = eleclimits[year]
         # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-        onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
+        onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
+                                        urban_elec_ratio, rural_elec_ratio)
 
 
         onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
@@ -305,7 +308,8 @@ elif choice == 3:
             time_step = time_steps[year]
             #investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
-            onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year)
+            onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step,
+                                            start_year, urban_elec_ratio, rural_elec_ratio)
 
             onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, year, start_year, end_year, time_step)
 
