@@ -82,7 +82,7 @@ elif choice == 2:
             onsseter.elec_current_and_future(elec_actual, pop_cutoff, dist_to_trans, min_night_lights, max_grid_dist,
                                              max_road_dist, pop_tot, pop_cutoff2, start_year)
 
-        onsseter.grid_reach_estimate(start_year, gridspeed=5)
+        onsseter.grid_reach_estimate(start_year, gridspeed=15)
 
         specs.loc[country, SPE_URBAN_MODELLED] = urban_modelled
         specs.loc[country, SPE_URBAN_CUTOFF] = urban_cutoff
@@ -155,11 +155,12 @@ elif choice == 3:
         #eleclimit = specs[SPE_ELEC_LIMIT][country]
         #investlimit = specs[SPE_INVEST_LIMIT][country]
 
-        step_year = start_year + time_step
+        #step_year = start_year + time_step
 
 
-        Technology.set_default_values(start_year=start_year,
-                                      end_year=step_year,
+        Technology.set_default_values(base_year=start_year,
+                                      start_year=start_year,
+                                      end_year=end_year,
                                       discount_rate=0.08,
                                       grid_cell_area=1,
                                       mv_line_cost=9000,
@@ -264,6 +265,9 @@ elif choice == 3:
         onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
                                  grid_calc, year)
 
+        onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+                       sa_diesel_calc, grid_calc, year, end_year, time_step)
+
         onsseter.apply_limitations(eleclimit, year)
 
         onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
@@ -323,6 +327,9 @@ elif choice == 3:
             #     pass
 
             onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year)
+
+            onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+                                           sa_diesel_calc, grid_calc, year, end_year, time_step)
 
             onsseter.apply_limitations(eleclimit, year)
 
