@@ -90,8 +90,15 @@ mg_pv_pop_2030 = df.loc[df['FinalElecCode2030'] == 5, 'NewConnections2030'].sum(
 mg_wind_pop_2030 = df.loc[df['FinalElecCode2030'] == 6, 'NewConnections2030'].sum() + mg_wind_pop_2023
 mg_hydro_pop_2030 = df.loc[df['FinalElecCode2030'] == 7, 'NewConnections2030'].sum() + mg_hydro_pop_2023
 
+# Total energy demand in 2018
+df.loc[(df['Actual_Elec_Status_2018'] == 1) & (df['IsUrban'] == 1), 'TotalDemand'] = df['PerCapitaDemand'] * (df['Pop2023'] - df['NewConnections2023'])
+df.loc[(df['Actual_Elec_Status_2018'] == 1) & (df['IsUrban'] == 0), 'TotalDemand'] = df['PerCapitaDemand'] * (df['Pop2023'] - df['NewConnections2023'])
+total_demand_2018 = df['TotalDemand'].sum()/1000000
+
 # Total energy demand in 2023 (GWh)
 df.loc[df['Actual_Elec_Status_2023'] == 1, 'TotalDemand'] = df['PerCapitaDemand'] * df['Pop2023']
+# df.loc[(df['Actual_Elec_Status_2023'] == 0) & (df['Actual_Elec_Status_2018'] == 1) & (df['IsUrban'] == 1), 'TotalDemand'] = df['PerCapitaDemand'] * df['Pop2018'] * 0.493056465
+# df.loc[(df['Actual_Elec_Status_2023'] == 0) & (df['Actual_Elec_Status_2018'] == 1) & (df['IsUrban'] == 0), 'TotalDemand'] = df['PerCapitaDemand'] * df['Pop2018'] * 0.241716167
 total_demand_2023 = df['TotalDemand'].sum()/1000000
 
 # Total energy demand in 2030 (GWh)

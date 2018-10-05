@@ -676,16 +676,14 @@ class SettlementProcessor:
 
         yearsofanalysis = [2023, 2030]
         # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
-        factor = 1
 
         for year in yearsofanalysis:
             self.df[SET_POP+"{}".format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] * 
-                                                               (yearly_urban_growth_rate ** (time_step*factor))
+                                                               (yearly_urban_growth_rate ** (year - start_year))
                                                                if row[SET_URBAN] > 1
                                                                else row[SET_POP_CALIB] * 
-                                                               (yearly_rural_growth_rate ** (time_step * factor)), 
+                                                               (yearly_rural_growth_rate ** (year - start_year)),
                                                                axis=1)
-            factor += 1
 
         self.df[SET_POP + "{}".format(start_year)] = self.df.apply(lambda row: row[SET_POP_CALIB], axis=1)
 
@@ -705,9 +703,7 @@ class SettlementProcessor:
         factor = (total_pop * total_elec_ratio) / (urban_pop * urban_elec_ratio + rural_pop * rural_elec_ratio)
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
-        print('factor: ' + str(factor))
-        print('urban_ratio: ' + str(urban_pop/total_pop))
-        print('rural_ratio: ' + str(rural_pop/total_pop))
+        # print('factor: ' + str(factor))
 
         logging.info('Calibrate current electrification')
         is_round_two = False
@@ -756,6 +752,7 @@ class SettlementProcessor:
                             self.df[SET_URBAN] < 2), SET_POP_CALIB].sum()) / rural_electrified
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
                 elec_modelled = pop_elec / pop_tot
+
 
                 # self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
                 #                                           1
@@ -1191,8 +1188,12 @@ class SettlementProcessor:
             self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = \
                 (self.df[SET_POP + "{}".format(year)] - self.df[SET_POP + "{}".format(year - time_step)])
-            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 0),
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] == 2),
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * self.df[SET_POP + "{}".format(start_year)]
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] < 2),
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * self.df[SET_POP + "{}".format(start_year)]
             self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
@@ -1263,16 +1264,16 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_URBAN] == 2, SET_ENERGY_PER_CELL + "{}".format(year)] = \
             self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
-        if year - time_step == start_year:
-            self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
-                self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
-            self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = \
-                self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
-            self.df.loc[self.df[SET_URBAN] == 2, SET_TOTAL_ENERGY_PER_CELL] = \
-                self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+        # if year - time_step == start_year:
+        self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
+            self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+        self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = \
+            self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+        self.df.loc[self.df[SET_URBAN] == 2, SET_TOTAL_ENERGY_PER_CELL] = \
+            self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
             # self.df[SET_TOTAL_ENERGY_PER_CELL] = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
-        else:
-            self.df[SET_TOTAL_ENERGY_PER_CELL] += self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
+        # else:
+        #     self.df[SET_TOTAL_ENERGY_PER_CELL] += self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
 
     def grid_reach_estimate(self, start_year, gridspeed):
         """ Estimates the year of grid arrival based on geospatial characteristics 
@@ -1589,87 +1590,117 @@ class SettlementProcessor:
         logging.info('Calculate investment cost')
         self.df[SET_INVESTMENT_COST + "{}".format(year)] = self.df.apply(res_investment_cost, axis=1)
 
-    def apply_limitations(self, eleclimit, year):
+    def apply_limitations(self, eleclimit, year, timestep):
 
         logging.info('Determine electrification limits')
-        choice = 1
-        if choice == 1:
-            elecrate = 0
-            min_investment = 0
-            self.df['InvestmentCapita'+ "{}".format(year)] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
-            while elecrate < eleclimit:
-                elecrate = sum(self.df[self.df['InvestmentCapita' + "{}".format(year)] < min_investment][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-                if elecrate < 0.999 * eleclimit:
-                    min_investment += 1
-                else:
-                    break
-            self.df.loc[self.df['InvestmentCapita' + "{}".format(year)] <= min_investment, SET_LIMIT + "{}".format(year)] = 1
-            self.df.loc[self.df['InvestmentCapita' + "{}".format(year)] > min_investment, SET_LIMIT + "{}".format(year)] = 0
-            print("The electrification rate achieved is {}".format(elecrate))
-        elif choice == 2:
+
+        if eleclimit == 1:
+            self.df[SET_LIMIT + "{}".format(year)] = 1
             elecrate = 1
-            min_lcoe = 0
-            while elecrate >= eleclimit:
-                elecrate = sum(self.df[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] < min_lcoe][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
-                if elecrate > eleclimit:
-                    min_lcoe += 0.001
-                else:
-                    break
-            self.df.loc[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] <= min_lcoe, SET_LIMIT + "{}".format(year)] = 1
-            self.df.loc[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] > min_lcoe, SET_LIMIT + "{}".format(year)] = 0
-            print("The electrification rate achieved is {}".format(elecrate))
-        elif choice == 3:
-            ### Original method
-            self.df[SET_LIMIT + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] == 1 else 0, axis=1)
-            conflictlimit = self.df[SET_CONFLICT].min()
-            mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
-            # max_loop = self.df[SET_ELEC_ORDER + "{}".format(year)].max()
-            max_loop = 0
-            iteration = 0
+        else:
+            choice = 2
+            if choice == 1:  # Lowest investment/capita
+                elecrate = 0
+                min_investment = 0
+                self.df['InvestmentCapita'+ "{}".format(year)] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+                while elecrate < eleclimit:
+                    elecrate = sum(self.df[self.df['InvestmentCapita' + "{}".format(year)] < min_investment][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
+                    if elecrate < 0.999 * eleclimit:
+                        min_investment += 1
+                    else:
+                        break
+                self.df.loc[self.df['InvestmentCapita' + "{}".format(year)] <= min_investment, SET_LIMIT + "{}".format(year)] = 1
+                self.df.loc[self.df['InvestmentCapita' + "{}".format(year)] > min_investment, SET_LIMIT + "{}".format(year)] = 0
+            elif choice == 2:  # Prioritize grid intensification then lowest investment/capita
+                elecrate = 0
+                min_investment = 0
+                self.df['InvestmentCapita' + "{}".format(year)] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+                if sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum() < eleclimit:
+                    eleclimit -= sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
 
-            elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / \
-                self.df[SET_POP + "{}".format(year)].sum()
-
-            if elecrate < eleclimit:
-                still_looking = True
-            else:
-                still_looking = False
-                print("The investment cap does not allow further electrification expansion in year:{}".format(year))
-            elec_loop = 99
-            while still_looking:
-                if elec_loop <= max_loop:
-                    self.df.loc[(self.df[SET_LCOE_GRID + "{}".format(year)] < 99) &
-                                (self.df[SET_ELEC_ORDER + "{}".format(year)] == elec_loop) &
-                                (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] != 1) &
-                                (self.df[SET_TRAVEL_HOURS] < mintraveldistance) &
-                                (self.df[SET_CONFLICT] <= conflictlimit), SET_LIMIT + "{}".format(year)] = 1
+                    while elecrate < 0.999 * eleclimit:
+                        elecrate = sum(self.df[(self.df['InvestmentCapita' + "{}".format(year)] < min_investment) & (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 0)][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
+                        if elecrate < 0.999 * eleclimit:
+                            min_investment += 1
+                        else:
+                            elecrate += sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 1][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
+                            break
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1), SET_LIMIT + "{}".format(year)] = 1
+                    self.df.loc[(self.df['InvestmentCapita' + "{}".format(year)] <= min_investment) & (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 0), SET_LIMIT + "{}".format(year)] = 1
+                    self.df.loc[(self.df['InvestmentCapita' + "{}".format(year)] > min_investment) & (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 0), SET_LIMIT + "{}".format(year)] = 0
                 else:
-                    self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] != 1) &
-                                (self.df[SET_TRAVEL_HOURS] < mintraveldistance) &
-                                (self.df[SET_CONFLICT] <= conflictlimit), SET_LIMIT + "{}".format(year)] = 1
+                    while elecrate < eleclimit:
+                        elecrate = sum(self.df[(self.df['InvestmentCapita' + "{}".format(year)] < min_investment) & (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year-timestep)] == 1)][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
+                        if elecrate < 0.999 * eleclimit:
+                            min_investment += 1
+                        else:
+                            break
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (self.df['InvestmentCapita' + "{}".format(year)] <= min_investment), SET_LIMIT + "{}".format(year)] = 1
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (self.df['InvestmentCapita' + "{}".format(year)] > min_investment), SET_LIMIT + "{}".format(year)] = 0
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0), SET_LIMIT + "{}".format(year)] = 0
+            elif choice == 3:  # Prioritize lowest LCOE (Not tested)
+                elecrate = 1
+                min_lcoe = 0
+                while elecrate >= eleclimit:
+                    elecrate = sum(self.df[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] < min_lcoe][SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
+                    if elecrate > 1.001 * eleclimit:
+                        min_lcoe += 0.001
+                    else:
+                        break
+                self.df.loc[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] <= min_lcoe, SET_LIMIT + "{}".format(year)] = 1
+                self.df.loc[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] > min_lcoe, SET_LIMIT + "{}".format(year)] = 0
+            elif choice == 4:  # Old method
+                self.df[SET_LIMIT + "{}".format(year)] = \
+                    self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] == 1 else 0, axis=1)
+                conflictlimit = self.df[SET_CONFLICT].min()
+                mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
+                # max_loop = self.df[SET_ELEC_ORDER + "{}".format(year)].max()
+                max_loop = 0
+                iteration = 0
 
                 elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / \
                     self.df[SET_POP + "{}".format(year)].sum()
 
-                iteration += 1
-
-                if elecrate < 0.9999 * eleclimit:
-                    mintraveldistance += 0.05
-                    if iteration > 100:
-                        mintraveldistance += 0.05
-                    if iteration > 200:
-                        mintraveldistance += 0.95
-                    if iteration > 300:
-                        iteration = 0
-                        conflictlimit += 1
-                        mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
-                        if conflictlimit > 0:
-                            elec_loop += 1
+                if elecrate < eleclimit:
+                    still_looking = True
                 else:
                     still_looking = False
+                    print("The investment cap does not allow further electrification expansion in year:{}".format(year))
+                elec_loop = 99
+                while still_looking:
+                    if elec_loop <= max_loop:
+                        self.df.loc[(self.df[SET_LCOE_GRID + "{}".format(year)] < 99) &
+                                    (self.df[SET_ELEC_ORDER + "{}".format(year)] == elec_loop) &
+                                    (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] != 1) &
+                                    (self.df[SET_TRAVEL_HOURS] < mintraveldistance) &
+                                    (self.df[SET_CONFLICT] <= conflictlimit), SET_LIMIT + "{}".format(year)] = 1
+                    else:
+                        self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] != 1) &
+                                    (self.df[SET_TRAVEL_HOURS] < mintraveldistance) &
+                                    (self.df[SET_CONFLICT] <= conflictlimit), SET_LIMIT + "{}".format(year)] = 1
 
-            print("The electrification rate achieved is {}".format(elecrate))
+                    elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / \
+                        self.df[SET_POP + "{}".format(year)].sum()
+
+                    iteration += 1
+
+                    if elecrate < 0.9999 * eleclimit:
+                        mintraveldistance += 0.05
+                        if iteration > 100:
+                            mintraveldistance += 0.05
+                        if iteration > 200:
+                            mintraveldistance += 0.95
+                        if iteration > 300:
+                            iteration = 0
+                            conflictlimit += 1
+                            mintraveldistance = self.df[SET_TRAVEL_HOURS].min()
+                            if conflictlimit > 0:
+                                elec_loop += 1
+                    else:
+                        still_looking = False
+
+        print("The electrification rate achieved is {}".format(elecrate))
+
         ### Fast method attempt
         # self.df['InvestmentCapita'] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / self.df[SET_POP+"{}".format(year)]
         # sorted_investment = self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)].copy()

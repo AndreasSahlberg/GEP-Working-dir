@@ -82,7 +82,7 @@ elif choice == 2:
             onsseter.elec_current_and_future(elec_actual, pop_cutoff, dist_to_trans, min_night_lights, max_grid_dist,
                                              max_road_dist, pop_tot, pop_cutoff2, start_year)
 
-        onsseter.grid_reach_estimate(start_year, gridspeed=15)
+        onsseter.grid_reach_estimate(start_year, gridspeed=9999)
 
         specs.loc[country, SPE_URBAN_MODELLED] = urban_modelled
         specs.loc[country, SPE_URBAN_CUTOFF] = urban_cutoff
@@ -268,7 +268,7 @@ elif choice == 3:
         onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                        sa_diesel_calc, grid_calc, year, end_year, time_step)
 
-        onsseter.apply_limitations(eleclimit, year)
+        onsseter.apply_limitations(eleclimit, year, time_step)
 
         onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
                                 grid_calc, year, end_year, time_step)
@@ -331,7 +331,7 @@ elif choice == 3:
             onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                                            sa_diesel_calc, grid_calc, year, end_year, time_step)
 
-            onsseter.apply_limitations(eleclimit, year)
+            onsseter.apply_limitations(eleclimit, year, time_step)
 
             onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year, end_year, time_step)
 
