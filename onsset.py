@@ -633,18 +633,21 @@ class SettlementProcessor:
         if calibrate:
             # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
             logging.info('Calibrate urban split')
-            sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
-            sorted_pop.sort_values(inplace=True)
+            #sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
+            #sorted_pop.sort_values(inplace=True)
+            sorted_pop = self.df.copy()
+            sorted_pop['Density'] = df2[SET_POP_CALIB] / df2['GridCellArea']
+            sorted_pop.sort_values(by=['Density'], inplace=True)
             urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
             cumulative_urban_pop = 0
             ii = 0
             while cumulative_urban_pop < urban_pop_break:
-                cumulative_urban_pop += sorted_pop.iloc[ii]
+                cumulative_urban_pop += sorted_pop[SET_POP_CALIB].iloc[ii]
                 ii += 1
-            urban_cutoff = sorted_pop.iloc[ii-1]
+            urban_cutoff = sorted_pop['Density'].iloc[ii-1]
 
             # Assign the 1 (urban)/0 (rural) values to each cell
-            self.df[SET_URBAN] = self.df.apply(lambda row: 2 if row[SET_POP_CALIB] > urban_cutoff else 0, axis=1)
+            self.df[SET_URBAN] = self.df.apply(lambda row: 2 if (row[SET_POP_CALIB]/row['GridCellArea']) > urban_cutoff else 0, axis=1)
 
         # Get the calculated urban ratio, and limit it to within reasonable boundaries
         pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
