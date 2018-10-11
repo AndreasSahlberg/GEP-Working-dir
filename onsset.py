@@ -5,7 +5,7 @@
 import os
 import logging
 import pandas as pd
-from math import ceil, pi, exp, log, sqrt
+from math import ceil, pi, exp, log, sqrt, radians, cos, sin, asin
 # from pyproj import Proj
 import numpy as np
 from collections import defaultdict
@@ -966,8 +966,10 @@ class SettlementProcessor:
         """
         new_grid_capacity = 0
         grid_capacity_limit = grid_cap_gen_limit  # kW per 5 years
-        x = (self.df[SET_X]/1000).tolist()
-        y = (self.df[SET_Y]/1000).tolist()
+        # x = (self.df[SET_X]/1000).tolist()
+        # y = (self.df[SET_Y]/1000).tolist()
+        x = (self.df[SET_X_DEG]).tolist()
+        y = (self.df[SET_Y_DEG]).tolist()
         pop = self.df[SET_POP + "{}".format(year)].tolist()
         # prev_pop = self.df[SET_POP + "{}".format(year - timestep)].tolist()
         confl = self.df[SET_CONFLICT].tolist()
@@ -1013,7 +1015,44 @@ class SettlementProcessor:
             elec_nodes2.append((x[elec], y[elec]))
         elec_nodes2 = np.asarray(elec_nodes2)
 
+        def haversine(lon1, lat1, lon2, lat2):
+            """
+            Calculate the great circle distance between two points
+            on the earth (specified in decimal degrees)
+            """
+            # convert decimal degrees to radians
+            lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+            # haversine formula
+            dlon = lon2 - lon1
+            dlat = lat2 - lat1
+            a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+            c = 2 * asin(sqrt(a))
+            r = 6371  # Radius of earth in kilometers. Use 3956 for miles
+            return c * r
+
         def closest_elec(unelec_node, elec_nodes):
+            # R = 3959.87433  # this is in miles.  For Earth radius in kilometers use 6372.8 km
+            #
+            # # Convert decimal degrees to Radians:
+            # lon1 = np.radians(unelec_node_lon.values)
+            # lat1 = np.radians(unelec_node_lat.values)
+            # lon2 = np.radians(elec_nodes_lon.values)
+            # lat2 = np.radians(elec_nodes_lat.values)
+            #
+            # # Implementing Haversine Formula:
+            # dlon = np.subtract(lon2, lon1)
+            # dlat = np.subtract(lat2, lat1)
+            #
+            # a = np.add(np.power(np.sin(np.divide(dlat, 2)), 2),
+            #            np.multiply(np.cos(lat1),
+            #                        np.multiply(np.cos(lat2),
+            #                                    np.power(np.sin(np.divide(dlon, 2)), 2))))
+            # c = np.multiply(2, np.arcsin(np.sqrt(a)))
+            # r = 6371
+            #
+            # dist_2 = c * r
+
             deltas = elec_nodes - unelec_node
             dist_2 = np.einsum('ij,ij->i', deltas, deltas)
             min_dist = np.argmin(dist_2)
@@ -1031,8 +1070,9 @@ class SettlementProcessor:
 
                 node = (x[unelec], y[unelec])
                 closest_elec_node = closest_elec(node, elec_nodes2)
-                dist = sqrt((x[electrified[closest_elec_node]] - x[unelec]) ** 2
-                            + (y[electrified[closest_elec_node]] - y[unelec]) ** 2)
+                dist = haversine(x[electrified[closest_elec_node]], y[electrified[closest_elec_node]], x[unelec], y[unelec])
+                # dist = sqrt((x[electrified[closest_elec_node]] - x[unelec]) ** 2
+                #             + (y[electrified[closest_elec_node]] - y[unelec]) ** 2)
                 dist_adjusted = grid_penalty_ratio[unelec] * dist
                 if dist <= max_dist:
                     if year-timestep == start_year:
@@ -1093,8 +1133,9 @@ class SettlementProcessor:
 
                         node = (x[unelec], y[unelec])
                         closest_elec_node = closest_elec(node, elec_nodes2)
-                        dist = sqrt((x[electrified[closest_elec_node]] - x[unelec]) ** 2
-                                    + (y[electrified[closest_elec_node]] - y[unelec]) ** 2)
+                        dist = haversine(x[electrified[closest_elec_node]], y[electrified[closest_elec_node]], x[unelec], y[unelec])
+                        # dist = sqrt((x[electrified[closest_elec_node]] - x[unelec]) ** 2
+                        #             + (y[electrified[closest_elec_node]] - y[unelec]) ** 2)
                         dist_adjusted = grid_penalty_ratio[unelec] * dist
                         prev_dist = cell_path_real[closest_elec_node]
                         if dist + prev_dist < max_dist:
@@ -1127,7 +1168,8 @@ class SettlementProcessor:
                             for elec in electrified_hashed:
                                 grid_lcoe = 99
                                 prev_dist = cell_path_real[elec]
-                                dist = sqrt((x[elec] - x[unelec]) ** 2 + (y[elec] - y[unelec]) ** 2)
+                                dist = haversine(x[elec], y[elec], x[unelec], y[unelec])
+                                # dist = sqrt((x[elec] - x[unelec]) ** 2 + (y[elec] - y[unelec]) ** 2)
                                 dist_adjusted = grid_penalty_ratio[unelec] * dist
                                 if prev_dist + dist < max_dist:
                                     grid_lcoe = grid_calc.get_lcoe(energy_per_cell=enerperhh[unelec],
