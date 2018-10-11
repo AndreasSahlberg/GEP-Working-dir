@@ -633,7 +633,7 @@ class SettlementProcessor:
         if calibrate:
             # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
             logging.info('Calibrate urban split')
-            sorted_pop = self.df[SET_POP_CALIB].copy()
+            sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
             sorted_pop.sort_values(inplace=True)
             urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
             cumulative_urban_pop = 0
