@@ -162,7 +162,7 @@ elif choice == 3:
                                       start_year=start_year,
                                       end_year=end_year,
                                       discount_rate=0.08,
-                                      grid_cell_area=1,
+                                      # grid_cell_area=1,
                                       mv_line_cost=9000,
                                       lv_line_cost=5000,
                                       mv_line_capacity=50,

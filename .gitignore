@@ -2,3 +2,14 @@
 .idea/misc.xml
 .idea/workspace.xml
 __pycache__/onsset.cpython-35.pyc
+*.iml
+*.iml
+*.pyd
+*.dll
+*.exe
+*.bat
+*.ps1
+venv/Scripts/activate
+*.cfg
+*.tcl
+*.iml
