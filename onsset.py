@@ -636,7 +636,7 @@ class SettlementProcessor:
             #sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
             #sorted_pop.sort_values(inplace=True)
             sorted_pop = self.df.copy()
-            sorted_pop['Density'] = df2[SET_POP_CALIB] / df2['GridCellArea']
+            sorted_pop['Density'] = sorted_pop[SET_POP_CALIB] / sorted_pop['GridCellArea']
             sorted_pop.sort_values(by=['Density'], inplace=True)
             urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
             cumulative_urban_pop = 0
@@ -1220,7 +1220,7 @@ class SettlementProcessor:
         So that they are in the table and can be read directly to calculate LCOEs
         """
 
-        self.df['GridCellArea'] = 1
+        # self.df['GridCellArea'] = 1
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
