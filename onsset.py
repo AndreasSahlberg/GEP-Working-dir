@@ -1175,7 +1175,7 @@ class SettlementProcessor:
         So that they are in the table and can be read directly to calculate LCOEs
         """
 
-        self.df['GridCellArea'] = 1
+        # self.df['GridCellArea'] = 1
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
