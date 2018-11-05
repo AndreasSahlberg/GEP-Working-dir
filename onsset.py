@@ -85,6 +85,7 @@ SET_MIN_OFFGRID_CODE = "Off_Grid_Code"
 SET_ELEC_FINAL_CODE = "FinalElecCode"
 SET_DIST_TO_TRANS = "TransformerDist"
 SET_TOTAL_ENERGY_PER_CELL = "TotalEnergyPerCell"  # all previous + current timestep
+SET_GRID_CELL_AREA = 'GridCellArea'
 
 
 # Columns in the specs file must match these exactly
@@ -636,18 +637,21 @@ class SettlementProcessor:
             #sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
             #sorted_pop.sort_values(inplace=True)
             sorted_pop = self.df.copy()
-            sorted_pop['Density'] = sorted_pop[SET_POP_CALIB] / sorted_pop['GridCellArea']
+            sorted_pop['Density'] = sorted_pop[SET_POP_CALIB] # / sorted_pop['GridCellArea']
             sorted_pop.sort_values(by=['Density'], inplace=True)
             urban_pop_break = (1-urban_current) * self.df[SET_POP_CALIB].sum()
             cumulative_urban_pop = 0
             ii = 0
             while cumulative_urban_pop < urban_pop_break:
+                # test = sorted_pop[SET_GRID_CELL_AREA].iloc[ii]
+                # if test > 0:
                 cumulative_urban_pop += sorted_pop[SET_POP_CALIB].iloc[ii]
                 ii += 1
             urban_cutoff = sorted_pop['Density'].iloc[ii-1]
 
             # Assign the 1 (urban)/0 (rural) values to each cell
-            self.df[SET_URBAN] = self.df.apply(lambda row: 2 if (row[SET_POP_CALIB]/row['GridCellArea']) > urban_cutoff else 0, axis=1)
+            # self.df[SET_URBAN] = self.df.apply(lambda row: 2 if (((row[SET_POP_CALIB]/row['GridCellArea']) > urban_cutoff) & (row['GridCellArea'] > 0))  else 0, axis=1)
+            self.df[SET_URBAN] = self.df.apply(lambda row: 2 if ((row[SET_POP_CALIB] > urban_cutoff) & (row['GridCellArea'] > 0)) else 0,axis=1)
 
         # Get the calculated urban ratio, and limit it to within reasonable boundaries
         pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
@@ -739,7 +743,7 @@ class SettlementProcessor:
             rural_electrified = rural_pop * rural_elec_ratio
             # rural_electrified = (1 - urban_electrified_modelled) * self.df[SET_POP_CALIB].sum() * rural_elec_access
             if priority == 1:
-                self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
                 # self.df.loc[(self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
                 # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
                 urban_elec_ratio = urban_electrified / (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 2), SET_POP_CALIB].sum())
