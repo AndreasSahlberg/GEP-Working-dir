@@ -216,6 +216,9 @@ class Technology:
         travel_hours required for diesel
         """
 
+        
+
+
         if people == 0:
             # If there are no people, the investment cost is zero.
             if get_investment_cost:
