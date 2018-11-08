@@ -227,10 +227,7 @@ class Technology:
 
         MV_line_type = 11  # kV
         MV_line_amperage_limit = 8.0  # Ampere (A)
-        MV_line_span = 25  # km buffer area that can be reached by an MV line
         MV_line_cost = 5000  # $/km  for 11-33 kV
-        MV_line_max_stretch = 50  # km length of MV line from main HV grid
-        # MV_increase_rate = 0.1            # (%)
 
         LV_line_type = 0.240  # kV
         LV_line_cost = 3000  # $/km for 0.4 kV
@@ -289,16 +286,14 @@ class Technology:
 
             MV_km = 0
             HV_km = 0
-            if peak_load <= max_MV_load and self.grid_price > 0:
+            if peak_load <= max_MV_load and additional_mv_line_length < 50 and self.grid_price > 0:
                 MV_amperage = MV_LV_sub_station_type / MV_line_type
                 No_of_MV_lines = ceil(peak_load / (MV_amperage * MV_line_type))
                 MV_km = additional_mv_line_length * No_of_MV_lines
-                No_of_MV_LV_subs = 1
             elif self.grid_price > 0:
                 HV_amperage = HV_LV_sub_station_type / HV_line_type
                 No_of_HV_lines = ceil(peak_load / (HV_amperage * HV_line_type))
                 HV_km = additional_mv_line_length * No_of_HV_lines
-                No_of_HV_LV_subs = 1
 
             Smax = peak_load / power_factor
             max_tranformer_area = pi * LV_line_max_length ** 2
@@ -326,18 +321,18 @@ class Technology:
             No_of_MV_LV_subs = 0
 
             if cluster_mv_lines_length > 0 and HV_km > 0:
-                No_of_HV_MV_subs = 1
+                No_of_HV_MV_subs = ceil(peak_load/HV_LV_sub_station_type)  # 1
             elif cluster_mv_lines_length > 0 and MV_km > 0:
-                No_of_MV_MV_subs = 1
+                No_of_MV_MV_subs = ceil(peak_load/MV_LV_sub_station_type)  # 1
             elif cluster_lv_lines_length > 0 and HV_km > 0:
-                No_of_HV_LV_subs = 1
+                No_of_HV_LV_subs = ceil(peak_load/HV_LV_sub_station_type)  # 1
             else:
-                No_of_MV_LV_subs = 1
+                No_of_MV_LV_subs = ceil(peak_load/MV_LV_sub_station_type)  # 1
 
             LV_km = cluster_lv_lines_length + transformer_lv_lines_length
-            MV_km += cluster_mv_lines_length
+            MV_km #  += cluster_mv_lines_length
 
-            return HV_km, MV_km, cluster_mv_lines_length, cluster_lv_lines_length, no_of_service_transf, \
+            return HV_km, MV_km, cluster_mv_lines_length, LV_km, no_of_service_transf, \
                    No_of_HV_MV_subs, No_of_MV_MV_subs, No_of_HV_LV_subs, No_of_MV_LV_subs, \
                    consumption, peak_load, total_nodes
 
@@ -352,18 +347,18 @@ class Technology:
             generation_per_year2, peak_load2, total_nodes2 = \
                 distribution_network(people=(people - new_connections),
                                      energy_per_cell=(total_energy_per_cell - energy_per_cell))
-            hv_lines_total_length = HV_km1 - HV_km2
-            mv_lines_connection_length = MV_km1 - MV_km2
-            mv_lines_distribution_length = cluster_lv_lines_length1 - cluster_lv_lines_length2
-            total_lv_lines_length = cluster_lv_lines_length1 - cluster_lv_lines_length2
-            num_transformers = no_of_service_transf1 - no_of_service_transf2
-            generation_per_year = generation_per_year1 - generation_per_year2
-            peak_load = peak_load1 - peak_load2
-            No_of_HV_LV_substation = No_of_HV_LV_subs1 - No_of_HV_LV_subs2
-            No_of_HV_MV_substation = No_of_HV_MV_subs1 - No_of_HV_MV_subs2
-            No_of_MV_MV_substation = No_of_MV_MV_subs1 - No_of_MV_MV_subs2
-            No_of_MV_LV_substation = No_of_MV_LV_subs1 - No_of_MV_LV_subs2
-            total_nodes = total_nodes1 - total_nodes2
+            hv_lines_total_length = max(HV_km1 - HV_km2, 0)
+            mv_lines_connection_length = max(MV_km1 - MV_km2, 0)
+            mv_lines_distribution_length = max(cluster_lv_lines_length1 - cluster_lv_lines_length2, 0)
+            total_lv_lines_length = max(cluster_lv_lines_length1 - cluster_lv_lines_length2, 0)
+            num_transformers = max(no_of_service_transf1 - no_of_service_transf2, 0)
+            generation_per_year = max(generation_per_year1 - generation_per_year2, 0)
+            peak_load = max(peak_load1 - peak_load2, 0)
+            No_of_HV_LV_substation = max(No_of_HV_LV_subs1 - No_of_HV_LV_subs2, 0)
+            No_of_HV_MV_substation = max(No_of_HV_MV_subs1 - No_of_HV_MV_subs2, 0)
+            No_of_MV_MV_substation = max(No_of_MV_MV_subs1 - No_of_MV_MV_subs2, 0)
+            No_of_MV_LV_substation = max(No_of_MV_LV_subs1 - No_of_MV_LV_subs2, 0)
+            total_nodes = max(total_nodes1 - total_nodes2, 0)
         else:
             hv_lines_total_length, mv_lines_connection_length, mv_lines_distribution_length, total_lv_lines_length, num_transformers, \
             No_of_HV_MV_substation, No_of_MV_MV_substation, No_of_HV_LV_substation, No_of_MV_LV_substation, \
@@ -389,17 +384,18 @@ class Technology:
             total_om_cost = td_om_cost
             fuel_cost = self.grid_price
         else:
+            # REVIEW Possibly add substation here for mini-grids
             conflict_sa_pen = {0: 1, 1: 1.03, 2: 1.07, 3: 1.125, 4: 1.25}
             conflict_mg_pen = {0: 1, 1: 1.05, 2: 1.125, 3: 1.25, 4: 1.5}
-            total_lv_lines_length *= 0 if self.standalone else 0.75
-            mv_lines_distribution_length *= 0 if self.standalone else 0.75
+            total_lv_lines_length *= 0 if self.standalone else 1
+            mv_lines_distribution_length *= 0 if self.standalone else 1
             mv_total_line_cost = self.mv_line_cost * mv_lines_distribution_length * conflict_mg_pen[conf_status]
             lv_total_line_cost = self.lv_line_cost * total_lv_lines_length * conflict_mg_pen[conf_status]
             service_transformer_total_cost = 0 if self.standalone else num_transformers * service_Transf_cost * conflict_mg_pen[conf_status]
             installed_capacity = peak_load / capacity_factor
             capital_investment = installed_capacity * self.capital_cost * conflict_sa_pen[conf_status] if self.standalone \
                 else installed_capacity * self.capital_cost * conflict_mg_pen[conf_status]
-            td_investment_cost = mv_total_line_cost + lv_total_line_cost + service_transformer_total_cost + total_nodes * self.connection_cost_per_hh
+            td_investment_cost = mv_total_line_cost + lv_total_line_cost + total_nodes * self.connection_cost_per_hh # + service_transformer_total_cost
             td_om_cost = td_investment_cost * self.om_of_td_lines * conflict_sa_pen[conf_status] if self.standalone \
                 else td_investment_cost * self.om_of_td_lines * conflict_mg_pen[conf_status]
             total_investment_cost = td_investment_cost + capital_investment
@@ -700,29 +696,45 @@ class SettlementProcessor:
         else:
             calibrate = True
 
+        # if calibrate:
+        #     # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
+        #     logging.info('Calibrate urban split')
+        #     # sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
+        #     # sorted_pop.sort_values(inplace=True)
+        #     sorted_pop = self.df.copy()
+        #     sorted_pop['Density'] = sorted_pop[SET_POP_CALIB]  # / sorted_pop['GridCellArea']
+        #     sorted_pop.sort_values(by=['Density'], inplace=True)
+        #     urban_pop_break = (1 - urban_current) * self.df[SET_POP_CALIB].sum()
+        #     cumulative_urban_pop = 0
+        #     ii = 0
+        #     while cumulative_urban_pop < urban_pop_break:
+        #         # test = sorted_pop[SET_GRID_CELL_AREA].iloc[ii]
+        #         # if test > 0:
+        #         cumulative_urban_pop += sorted_pop[SET_POP_CALIB].iloc[ii]
+        #         ii += 1
+        #     urban_cutoff = sorted_pop['Density'].iloc[ii - 1]
+        #
+        #     # Assign the 1 (urban)/0 (rural) values to each cell
+        #     # self.df[SET_URBAN] = self.df.apply(lambda row: 2 if (((row[SET_POP_CALIB]/row['GridCellArea']) > urban_cutoff) & (row['GridCellArea'] > 0))  else 0, axis=1)
+        #     self.df[SET_URBAN] = self.df.apply(
+        #         lambda row: 2 if ((row[SET_POP_CALIB] > urban_cutoff) & (row['GridCellArea'] > 0)) else 0, axis=1)
+
         if calibrate:
-            # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
-            logging.info('Calibrate urban split')
-            # sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
-            # sorted_pop.sort_values(inplace=True)
-            sorted_pop = self.df.copy()
-            sorted_pop['Density'] = sorted_pop[SET_POP_CALIB]  # / sorted_pop['GridCellArea']
-            sorted_pop.sort_values(by=['Density'], inplace=True)
-            urban_pop_break = (1 - urban_current) * self.df[SET_POP_CALIB].sum()
-            cumulative_urban_pop = 0
-            ii = 0
-            while cumulative_urban_pop < urban_pop_break:
-                # test = sorted_pop[SET_GRID_CELL_AREA].iloc[ii]
-                # if test > 0:
-                cumulative_urban_pop += sorted_pop[SET_POP_CALIB].iloc[ii]
-                ii += 1
-            urban_cutoff = sorted_pop['Density'].iloc[ii - 1]
+            urban_modelled = 2
+            factor = 1
+            while abs(urban_modelled - urban_current) > 0.1:
+                self.df.loc[SET_URBAN] = 0
+                self.df.loc[(self.df[SET_POP_CALIB] > 5000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 350 * factor), SET_URBAN] = 1
+                self.df.loc[(self.df[SET_POP_CALIB] > 50000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 1500 * factor), SET_URBAN] = 2
+                pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()  # REVIEW! CONSIDER ONLY URBAN CENTERS AS URBAN
+                urban_modelled = pop_urb / pop_actual
+                if urban_modelled > urban_current:
+                    factor *= 1.1
+                else:
+                    factor *= 0.9
+                print(urban_modelled, factor)
 
-            # Assign the 1 (urban)/0 (rural) values to each cell
-            # self.df[SET_URBAN] = self.df.apply(lambda row: 2 if (((row[SET_POP_CALIB]/row['GridCellArea']) > urban_cutoff) & (row['GridCellArea'] > 0))  else 0, axis=1)
-            self.df[SET_URBAN] = self.df.apply(
-                lambda row: 2 if ((row[SET_POP_CALIB] > urban_cutoff) & (row['GridCellArea'] > 0)) else 0, axis=1)
-
+        print('Factor: ' + str(factor))
         # Get the calculated urban ratio, and limit it to within reasonable boundaries
         pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
         urban_modelled = pop_urb / pop_actual
@@ -782,6 +794,7 @@ class SettlementProcessor:
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
         # print('factor: ' + str(factor))
+        self.df['ElecPop'] = self.df[SET_POP_CALIB] * self.df['NTLBin'] / self.df['NTLArea']
 
         logging.info('Calibrate current electrification')
         is_round_two = False
@@ -807,22 +820,17 @@ class SettlementProcessor:
         condition = 0
         while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
-            # urban_electrified = 0.159853988426699 * 17573607 * 0.487
             urban_electrified = urban_pop * urban_elec_ratio
-            # urban_electrified = urban_electrified_modelled * self.df[SET_POP_CALIB].sum() * urban_elec_access
-            # rural_electrified = (1 - 0.159853988426699) * 17573607 * 0.039
             rural_electrified = rural_pop * rural_elec_ratio
-            # rural_electrified = (1 - urban_electrified_modelled) * self.df[SET_POP_CALIB].sum() * rural_elec_access
             if priority == 1:
-                self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
-                        self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
-                # self.df.loc[(self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
-                # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
+                # self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
+                #         self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df['GridDistCalibElec'] < 3) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
                 urban_elec_ratio = urban_electrified / (
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 2), SET_POP_CALIB].sum())
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 2), 'ElecPop'].sum())
                 rural_elec_ratio = rural_electrified / (
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] < 2), SET_POP_CALIB].sum())
-                pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] < 2), 'ElecPop'].sum())
+                pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, 'ElecPop'].sum()
                 elec_modelled = pop_elec / pop_tot
             else:
                 self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
@@ -834,89 +842,6 @@ class SettlementProcessor:
                         self.df[SET_URBAN] < 2), SET_POP_CALIB].sum()) / rural_electrified
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
                 elec_modelled = pop_elec / pop_tot
-
-                # self.df[SET_ELEC_CURRENT] = self.df.apply(lambda row:
-                #                                           1
-                #                                           if ((row[SET_NIGHT_LIGHTS] > min_night_lights or
-                #                                                row[SET_POP_CALIB] > pop_cutoff and
-                #                                                row['GridDistCalibElec'] < max_grid_dist and
-                #                                                row[SET_ROAD_DIST] < max_road_dist))
-                #                                           or (row[SET_POP_CALIB] > pop_cutoff2 and
-                #                                                  (row['GridDistCalibElec'] < grid_cutoff2 or
-                #                                                   row[SET_ROAD_DIST] < road_cutoff2))
-                #                                           else 0,
-                #                                           axis=1)
-                #
-                # # Get the calculated electrified ratio, and limit it to within reasonable boundaries
-                # pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_POP_CALIB].sum()
-                # elec_modelled = pop_elec / pop_tot
-                #
-                # if elec_modelled == 0:
-                #     elec_modelled = 0.01
-                # elif elec_modelled == 1:
-                #     elec_modelled = 0.99
-                #
-                # if abs(elec_modelled - elec_actual) < accuracy:
-                #     break
-                # elif not is_round_two:
-                #     min_night_lights = sorted([1, min_night_lights - min_night_lights * 2 *
-                #                                (elec_actual - elec_modelled) / elec_actual, 10])[1]
-                #     if priority == 1:
-                #         max_grid_dist = sorted([0.5, max_grid_dist + max_grid_dist * 2 *
-                #                                 (elec_actual - elec_modelled) / elec_actual, 10])[1]
-                #     else:
-                #         max_grid_dist = sorted([5, max_grid_dist + max_grid_dist * 2 *
-                #                                 (elec_actual - elec_modelled) / elec_actual, 50])[1]
-                #     max_road_dist = sorted([0.5, max_road_dist + max_road_dist * 2 *
-                #                             (elec_actual - elec_modelled) / elec_actual, 50])[1]
-                # elif elec_modelled - elec_actual < 0:
-                #     pop_cutoff2 = sorted([0.01, pop_cutoff2 - pop_cutoff2 *
-                #                           (elec_actual - elec_modelled) / elec_actual, 100000])[1]
-                # elif elec_modelled - elec_actual > 0:
-                #     pop_cutoff = sorted([0.01, pop_cutoff - pop_cutoff * 0.5 *
-                #                          (elec_actual - elec_modelled) / elec_actual, 10000])[1]
-                #
-                # constraints = '{}{}{}{}{}'.format(pop_cutoff, min_night_lights, max_grid_dist, max_road_dist, pop_cutoff2)
-                # if constraints in prev_vals and not is_round_two:
-                #     logging.info('Repeating myself, on to round two')
-                #     prev_vals = []
-                #     is_round_two = True
-                # elif constraints in prev_vals and is_round_two:
-                #     logging.info('NOT SATISFIED: repeating myself')
-                #     print('2. Modelled electrification rate = {}'.format(elec_modelled))
-                #     if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
-                #         count = 0
-                #         is_round_two = False
-                #         pop_cutoff = float(input('Enter value for pop_cutoff: '))
-                #         min_night_lights = float(input('Enter value for min_night_lights: '))
-                #         max_grid_dist = float(input('Enter value for max_grid_dist: '))
-                #         max_road_dist = float(input('Enter value for max_road_dist: '))
-                #         pop_cutoff2 = float(input('Enter value for pop_cutoff2: '))
-                #     else:
-                #         break
-                # else:
-                #     prev_vals.append(constraints)
-                #
-                # if count >= max_iterations_one and not is_round_two:
-                #     logging.info('Got to {}, on to round two'.format(max_iterations_one))
-                #     is_round_two = True
-                # elif count >= max_iterations_two and is_round_two:
-                #     logging.info('NOT SATISFIED: Got to {}'.format(max_iterations_two))
-                #     print('2. Modelled electrification rate = {}'.format(elec_modelled))
-                #     if 'y' in input('Do you want to rerun calibration with new input values? <y/n>'):
-                #         count = 0
-                #         is_round_two = False
-                #         pop_cutoff = int(input('Enter value for pop_cutoff: '))
-                #         min_night_lights = int(input('Enter value for min_night_lights: '))
-                #         max_grid_dist = int(input('Enter value for max_grid_dist: '))
-                #         max_road_dist = int(input('Enter value for max_road_dist: '))
-                #         pop_cutoff2 = int(input('Enter value for pop_cutoff2: '))
-                #     else:
-                #         break
-                #
-                # count += 1
-                # rural_elec_ratio = 1
-                # urban_elec_ratio = 1
 
             logging.info('The modelled electrification rate achieved is {}. '
                          'If this is not acceptable please revise this part of the algorithm'.format(elec_modelled))
@@ -1134,7 +1059,7 @@ class SettlementProcessor:
                 # dist = sqrt((x[electrified[closest_elec_node]] - x[unelec]) ** 2
                 #             + (y[electrified[closest_elec_node]] - y[unelec]) ** 2)
                 dist_adjusted = grid_penalty_ratio[unelec] * dist
-                if dist <= max_dist:
+                if dist <= max_dist or year - timestep == start_year:
                     if year - timestep == start_year:
                         elec_loop_value = 0
                     else:
@@ -1289,12 +1214,11 @@ class SettlementProcessor:
             self.df.loc[
                 (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] == 2),
                 SET_NEW_CONNECTIONS + "{}".format(year)] = \
-                (self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * self.df[
-                    SET_POP + "{}".format(year - time_step)])
+                (self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * self.df['ElecPop'] / self.df[SET_POP] * self.df[SET_POP + "{}".format(year - time_step)])
             self.df.loc[
                 (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] < 2),
                 SET_NEW_CONNECTIONS + "{}".format(year)] = \
-                (self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * self.df[
+                (self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * self.df['ElecPop'] / self.df[SET_POP] * self.df[
                     SET_POP + "{}".format(year - time_step)])
             self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
