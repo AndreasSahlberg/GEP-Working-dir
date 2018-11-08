@@ -314,7 +314,10 @@ class Technology:
                 cluster_lv_lines_length = 0
                 cluster_mv_lines_length = 2 / 3 * cluster_radius * no_of_service_transf
 
-            transformer_lv_lines_length = 2 / 3 * transformer_radius * total_nodes
+            hh_area = grid_cell_area / total_nodes
+            hh_diameter = 2* ((hh_area / pi) ** 0.5)
+
+            transformer_lv_lines_length = hh_diameter * total_nodes
             No_of_HV_MV_subs = 0
             No_of_MV_MV_subs = 0
             No_of_HV_LV_subs = 0
@@ -330,7 +333,7 @@ class Technology:
                 No_of_MV_LV_subs = ceil(peak_load/MV_LV_sub_station_type)  # 1
 
             LV_km = cluster_lv_lines_length + transformer_lv_lines_length
-            MV_km #  += cluster_mv_lines_length
+            MV_km  # += cluster_mv_lines_length
 
             return HV_km, MV_km, cluster_mv_lines_length, LV_km, no_of_service_transf, \
                    No_of_HV_MV_subs, No_of_MV_MV_subs, No_of_HV_LV_subs, No_of_MV_LV_subs, \
@@ -395,7 +398,7 @@ class Technology:
             installed_capacity = peak_load / capacity_factor
             capital_investment = installed_capacity * self.capital_cost * conflict_sa_pen[conf_status] if self.standalone \
                 else installed_capacity * self.capital_cost * conflict_mg_pen[conf_status]
-            td_investment_cost = mv_total_line_cost + lv_total_line_cost + total_nodes * self.connection_cost_per_hh # + service_transformer_total_cost
+            td_investment_cost = mv_total_line_cost + lv_total_line_cost + total_nodes * self.connection_cost_per_hh + service_transformer_total_cost # REVIEW
             td_om_cost = td_investment_cost * self.om_of_td_lines * conflict_sa_pen[conf_status] if self.standalone \
                 else td_investment_cost * self.om_of_td_lines * conflict_mg_pen[conf_status]
             total_investment_cost = td_investment_cost + capital_investment
@@ -732,9 +735,8 @@ class SettlementProcessor:
                     factor *= 1.1
                 else:
                     factor *= 0.9
-                print(urban_modelled, factor)
+                # print(urban_modelled, factor)
 
-        print('Factor: ' + str(factor))
         # Get the calculated urban ratio, and limit it to within reasonable boundaries
         pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
         urban_modelled = pop_urb / pop_actual

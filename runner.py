@@ -19,8 +19,9 @@ specs_path = filedialog.askopenfilename()
 
 specs = pd.read_excel(specs_path, index_col=0)
 
-countries = str(input('countries: ')).split()
-countries = specs.index.tolist() if 'all' in countries else countries
+countries = ['Malawi']
+# countries = str(input('countries: ')).split()
+# countries = specs.index.tolist() if 'all' in countries else countries
 
 choice = int(input('Enter 1 to split, 2 to prepare the inputs, 3 to run a scenario: '))
 
@@ -105,18 +106,9 @@ elif choice == 2:
 
 elif choice == 3:
 
-    # wb_tiers_all = {1: 7.738, 2: 43.8, 3: 160.6, 4: 423.4, 5: 598.6}
-    # print("""\nWorld Bank Tiers of Electricity Access
-    #       1: {} kWh/person/year
-    #       2: {} kWh/person/year
-    #       3: {} kWh/person/year
-    #       4: {} kWh/person/year
-    #       5: {} kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
-    #                                       wb_tiers_all[4], wb_tiers_all[5]))
-    # wb_tier_urban = int(input('Enter the tier number for urban: '))
-    # wb_tier_rural = int(input('Enter the tier number for rural: '))
 
-    diesel_high = True if 'y' in input('Use high diesel value? <y/n> ') else False
+    # diesel_high = True if 'y' in input('Use high diesel value? <y/n> ') else False
+    diesel_high = True
     diesel_tag = 'high' if diesel_high else 'low'
     #do_combine = True if 'y' in input('Combine countries into a single file? <y/n> ') else False
 
