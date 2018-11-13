@@ -227,7 +227,7 @@ class Technology:
 
         MV_line_type = 11  # kV
         MV_line_amperage_limit = 8.0  # Ampere (A)
-        MV_line_cost = 5000  # $/km  for 11-33 kV
+        MV_line_cost = 9000  # $/km  for 11-33 kV
 
         LV_line_type = 0.240  # kV
         LV_line_cost = 3000  # $/km for 0.4 kV
