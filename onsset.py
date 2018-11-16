@@ -1150,7 +1150,7 @@ class SettlementProcessor:
                                     new_grid_capacity += peak_load
                                     if unelec not in changes:
                                         changes.append(unelec)
-                        elif new_grid_capacity + peak_load < grid_capacity_limit:
+                        elif new_grid_capacity + peak_load < grid_capacity_limit and 1 > 2:
                             electrified_hashed = self.get_unelectrified_rows(hash_table, unelec, x, y, max_dist)
                             grid_capacity_addition_loop = 0
                             for elec in electrified_hashed:
