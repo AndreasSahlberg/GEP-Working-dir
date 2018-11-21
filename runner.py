@@ -252,6 +252,8 @@ elif choice == 3:
 
         onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
 
+
+
         onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
 
         onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,

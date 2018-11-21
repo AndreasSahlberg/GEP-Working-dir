@@ -966,6 +966,9 @@ class SettlementProcessor:
             else 99,
                           axis=1)
 
+    def pre_new_lines(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit):
+        pass
+
     def elec_extension(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit):
         """
         Iterate through all electrified settlements and find which settlements can be economically connected to the grid
@@ -1058,8 +1061,6 @@ class SettlementProcessor:
                 closest_elec_node = closest_elec(node, elec_nodes2)
                 dist = haversine(x[electrified[closest_elec_node]], y[electrified[closest_elec_node]], x[unelec],
                                  y[unelec])
-                # dist = sqrt((x[electrified[closest_elec_node]] - x[unelec]) ** 2
-                #             + (y[electrified[closest_elec_node]] - y[unelec]) ** 2)
                 dist_adjusted = grid_penalty_ratio[unelec] * dist
                 if dist <= max_dist or year - timestep == start_year:
                     if year - timestep == start_year:
