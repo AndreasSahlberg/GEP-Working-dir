@@ -250,6 +250,9 @@ elif choice == 3:
         onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                                           sa_diesel_calc, year, start_year, end_year, time_step)
 
+        if year - time_step == start_year:
+            onsseter.current_mv_line_dist()
+
         onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
 
 
@@ -298,6 +301,8 @@ elif choice == 3:
 
 
         # The runner beggins here..
+
+        onsseter.current_mv_line_dist()
 
         for year in yearsofanalysis:
 
