@@ -1079,11 +1079,13 @@ class SettlementProcessor:
         grid_penalty_ratio = self.df[SET_GRID_PENALTY].tolist()
         status = self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)].tolist()
         min_code_lcoes = self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)].tolist()
+        min_off_grid_code = self.df[SET_MIN_OFFGRID_CODE + "{}".format(year)].tolist()
         new_lcoes = self.df[SET_LCOE_GRID + "{}".format(year)].tolist()
         grid_reach = self.df[SET_GRID_REACH_YEAR].tolist()
         # cell_path_real = list(np.zeros(len(status)).tolist())
         cell_path_real = self.df[SET_MV_CONNECT_DIST].tolist()
-        planned_hv_dist = self.df[SET_HV_DIST_PLANNED].tolist()
+        # planned_hv_dist = self.df[SET_SUBSTATION_DIST].tolist()  # If connecting from substation
+        planned_hv_dist = self.df[SET_HV_DIST_PLANNED].tolist()  # If connecting from anywhere on the HV line
 
         urban_initially_electrified = sum(self.df.loc[
                                               (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (
@@ -1100,6 +1102,25 @@ class SettlementProcessor:
 
         cell_path_adjusted = list(np.zeros(len(status)).tolist())
         electrified, unelectrified = self.separate_elec_status(status)
+
+        filtered_unelectrified = []
+        for unelec in unelectrified:
+            grid_lcoe = grid_calc.get_lcoe(energy_per_cell=enerperhh[unelec],
+                                           start_year=year - timestep,
+                                           end_year=end_year,
+                                           people=pop[unelec],
+                                           new_connections=new_connections[unelec],
+                                           total_energy_per_cell=total_energy_per_cell[unelec],
+                                           prev_code=prev_code[unelec],
+                                           num_people_per_hh=nupppphh[unelec],
+                                           grid_cell_area=grid_cell_area[unelec],
+                                           conf_status=confl[unelec],
+                                           travel_hours=travl[unelec],
+                                           additional_mv_line_length=0,
+                                           elec_loop=0)
+            if grid_lcoe < min_code_lcoes[unelec]:
+                filtered_unelectrified.append(unelec)
+        unelectrified = filtered_unelectrified
 
         close = []
         elec_nodes2 = []
@@ -1211,7 +1232,7 @@ class SettlementProcessor:
                                                    travel_hours=travl[unelec],
                                                    additional_mv_line_length=dist_adjusted,
                                                    elec_loop=elec_loop_value,
-                                                   additional_transformer=1)
+                                                   additional_transformer=1)  # 0 if connecting to substation, 1 if connecting anywhere on HV line
                     # grid_lcoe = 99 # FIX
                     if (grid_lcoe < min_code_lcoes[unelec]) and (new_grid_capacity + peak_load < grid_capacity_limit):
                         new_lcoes[unelec] = grid_lcoe
@@ -1323,9 +1344,9 @@ class SettlementProcessor:
         Runs the grid extension algorithm
         """
         logging.info('Electrification algorithm starts running')
-        pre_elec_dist = 10000
-        self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)], self.df[SET_MV_CONNECT_DIST] = self.pre_new_lines(grid_calc, max_dist, year, start_year, end_year,
-                                                                      timestep, grid_cap_gen_limit)
+        # pre_elec_dist = 10000
+        #         # self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)], self.df[SET_MV_CONNECT_DIST] = self.pre_new_lines(grid_calc, max_dist, year, start_year, end_year,
+        #         #                                                               timestep, grid_cap_gen_limit)
 
         self.df[SET_LCOE_GRID + "{}".format(year)], self.df[SET_MIN_GRID_DIST + "{}".format(year)], self.df[
             SET_ELEC_ORDER + "{}".format(year)], self.df[SET_MV_CONNECT_DIST] = self.elec_extension(grid_calc, max_dist, year, start_year, end_year,
