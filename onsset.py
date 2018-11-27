@@ -316,7 +316,8 @@ class Technology:
                 cluster_mv_lines_length = 0
             else:
                 cluster_lv_lines_length = 0
-                cluster_mv_lines_length = 2 / 3 * cluster_radius * no_of_service_transf
+                # cluster_mv_lines_length = 2 / 3 * cluster_radius * no_of_service_transf
+                cluster_mv_lines_length = 2 * transformer_radius * no_of_service_transf
 
             hh_area = grid_cell_area / total_nodes
             hh_diameter = 2* ((hh_area / pi) ** 0.5)
