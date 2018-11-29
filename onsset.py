@@ -263,6 +263,9 @@ class Technology:
             else:
                 energy_per_cell = 0.000000000001
 
+        if grid_cell_area <= 0:
+            grid_cell_area = 0.001
+
         if grid_penalty_ratio == 0:
             grid_penalty_ratio = self.grid_penalty_ratio
 
@@ -273,12 +276,22 @@ class Technology:
         def distribution_network(people, energy_per_cell):
             if energy_per_cell <= 0:
                 energy_per_cell = 0.0001
+            try:
+                int(energy_per_cell)
+            except ValueError:
+                energy_per_cell = 0.0001
+
+
             if people <= 0:
                 people = 0.0001
 
             consumption = energy_per_cell  # kWh/year
             average_load = consumption / (1 - self.distribution_losses) / HOURS_PER_YEAR  # kW
             peak_load = average_load / self.base_to_peak_load_ratio  # kW
+            try:
+                int(peak_load)
+            except ValueError:
+                peak_load = 1
 
             # Sizing HV/MV
             HV_to_MV_lines = HV_line_cost / MV_line_cost
@@ -299,8 +312,12 @@ class Technology:
             max_tranformer_area = pi * LV_line_max_length ** 2
             total_nodes = (people / num_people_per_hh) + productive_nodes
 
-            no_of_service_transf = ceil(max(Smax / service_Transf_type, total_nodes / max_nodes_per_serv_trans,
+
+            try:
+                no_of_service_transf = ceil(max(Smax / service_Transf_type, total_nodes / max_nodes_per_serv_trans,
                                             grid_cell_area / max_tranformer_area))
+            except ValueError:
+                no_of_service_transf = 1
             transformer_radius = ((grid_cell_area / no_of_service_transf) / pi) ** 0.5
             transformer_nodes = total_nodes / no_of_service_transf
             transformer_load = peak_load / no_of_service_transf
@@ -367,6 +384,10 @@ class Technology:
             No_of_HV_MV_substation, No_of_MV_MV_substation, No_of_HV_LV_substation, No_of_MV_LV_substation, \
             generation_per_year, peak_load, total_nodes = distribution_network(people, energy_per_cell)
 
+        try:
+            int(conf_status)
+        except ValueError:
+            conf_status = 0
         conf_grid_pen = {0: 1, 1: 1.1, 2: 1.25, 3: 1.5, 4: 2}
         # The investment and O&M costs are different for grid and non-grid solutions
         if self.grid_price > 0:
