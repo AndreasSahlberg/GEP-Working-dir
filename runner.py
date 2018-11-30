@@ -115,37 +115,55 @@ elif choice == 3:
     messagebox.showinfo('OnSSET', 'Open the csv file with calibrated GIS data')
     base_dir = filedialog.askopenfilename()
     messagebox.showinfo('OnSSET', 'Browse to result folder and name the scenario to save outputs')
-    output_dir = filedialog.asksaveasfilename()
+    # output_dir = filedialog.asksaveasfilename()
 
     print('\n --- Running scenario --- \n')
 
-    for country in countries:
+    ScenarioInfo = pd.read_excel(specs_path, sheet_name='ScenarioInfo')
+    Scenarios = ScenarioInfo['Scenario']
+    ScenarioParameters = pd.read_excel(specs_path, sheet_name='ScenarioParameters')
+    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsData')
+
+    for scenario in Scenarios:
         # create country_specs here
-        print(' --- {} --- {} --- '.format(country, diesel_tag))
+        print('Scenario: ' + str(scenario))
+        countryID = SpecsData.iloc[0]['CountryCode']
+        print(countryID)
+        popIndex = ScenarioInfo.iloc[scenario]['Population_Growth']
+        tierIndex = ScenarioInfo.iloc[scenario]['Target_electricity_consumption_level']
+        fiveyearIndex = ScenarioInfo.iloc[scenario]['Electrification_target_5_years']
+        gridIndex = ScenarioInfo.iloc[scenario]['Grid_electricity_generation_cost']
+        pvIndex = ScenarioInfo.iloc[scenario]['SA_PV_cost']
+        dieselIndex = ScenarioInfo.iloc[scenario]['Diesel_price']
+        productiveIndex = ScenarioInfo.iloc[scenario]['Productive_uses_demand']
+        prioIndex = ScenarioInfo.iloc[scenario]['Prioritization_algorithm']
+
         settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
-        settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
+        # settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
+        settlements_out_csv = os.path.join('{}-{}_{}_{}_{}_{}_{}_{}_{}.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
+        print(settlements_out_csv)
         summary_csv = output_dir + 'summary.csv'
 
         onsseter = SettlementProcessor(settlements_in_csv)
 
-        start_year = specs[SPE_START_YEAR][country]
-        end_year = specs[SPE_END_YEAR][country]
-        time_step = specs[SPE_TIMESTEP][country]
+        start_year = SpecsData.iloc[SPE_START_YEAR][0]
+        end_year = SpecsData.iloc[SPE_END_YEAR][0]
+        time_step = SpecsData.iloc[SPE_TIMESTEP][0]
 
-        diesel_price = specs[SPE_DIESEL_PRICE_HIGH][country] if diesel_high else specs[SPE_DIESEL_PRICE_LOW][country]
-        grid_price = specs[SPE_GRID_PRICE][country]
-        existing_grid_cost_ratio = specs[SPE_EXISTING_GRID_COST_RATIO][country]
-        num_people_per_hh_rural = float(specs[SPE_NUM_PEOPLE_PER_HH_RURAL][country])
-        num_people_per_hh_urban = float(specs[SPE_NUM_PEOPLE_PER_HH_URBAN][country])
-        max_grid_extension_dist = float(specs[SPE_MAX_GRID_EXTENSION_DIST][country])
-        urban_elec_ratio = float(specs['rural_elec_ratio'][country])
-        rural_elec_ratio = float(specs['urban_elec_ratio'][country])
+        diesel_price = SpecsData.iloc[SPE_DIESEL_PRICE_HIGH][0] if diesel_high else SpecsData.iloc[SPE_DIESEL_PRICE_LOW][0]
+        grid_price = SpecsData.iloc[SPE_GRID_PRICE][0]
+        existing_grid_cost_ratio = SpecsData.iloc[SPE_EXISTING_GRID_COST_RATIO][0]
+        num_people_per_hh_rural = float(SpecsData.iloc[SPE_NUM_PEOPLE_PER_HH_RURAL][0])
+        num_people_per_hh_urban = float(SpecsData.iloc[SPE_NUM_PEOPLE_PER_HH_URBAN][0])
+        max_grid_extension_dist = float(SpecsData.iloc[SPE_MAX_GRID_EXTENSION_DIST][0])
+        urban_elec_ratio = float(SpecsData.iloc['rural_elec_ratio'][0])
+        rural_elec_ratio = float(SpecsData.iloc['urban_elec_ratio'][0])
         # energy_per_pp_rural = wb_tiers_all[wb_tier_rural]
         # energy_per_pp_urban = wb_tiers_all[wb_tier_urban]
-        mg_pv_cap_cost = specs.loc[country, SPE_CAP_COST_MG_PV]
-        grid_cap_gen_limit = specs.loc[country, 'NewGridGenerationCapacityTimestepLimit']
-        #eleclimit = specs[SPE_ELEC_LIMIT][country]
-        #investlimit = specs[SPE_INVEST_LIMIT][country]
+        mg_pv_cap_cost = SpecsData.loc[0, SPE_CAP_COST_MG_PV]
+        grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']
+        #eleclimit = SpecsData.iloc[SPE_ELEC_LIMIT][0]
+        #investlimit = SpecsData.iloc[SPE_INVEST_LIMIT][0]
 
         #step_year = start_year + time_step
 
@@ -166,12 +184,12 @@ elif choice == 3:
                                       mv_increase_rate=0.1)
 
         grid_calc = Technology(om_of_td_lines=0.03,
-                               distribution_losses=float(specs[SPE_GRID_LOSSES][country]),
+                               distribution_losses=float(SpecsData.iloc[SPE_GRID_LOSSES][0]),
                                connection_cost_per_hh=122,
-                               base_to_peak_load_ratio=float(specs[SPE_BASE_TO_PEAK][country]),
+                               base_to_peak_load_ratio=float(SpecsData.iloc[SPE_BASE_TO_PEAK][0]),
                                capacity_factor=1,
                                tech_life=30,
-                               grid_capacity_investment=float(specs[SPE_GRID_CAPACITY_INVESTMENT][country]),
+                               grid_capacity_investment=float(SpecsData.iloc[SPE_GRID_CAPACITY_INVESTMENT][0]),
                                grid_penalty_ratio=1,
                                grid_price=grid_price)
 
