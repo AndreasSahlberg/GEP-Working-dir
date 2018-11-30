@@ -250,7 +250,12 @@ elif choice == 3:
         onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                                           sa_diesel_calc, year, start_year, end_year, time_step)
 
+        if year - time_step == start_year:
+            onsseter.current_mv_line_dist()
+
         onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
+
+
 
         onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
 
@@ -297,12 +302,15 @@ elif choice == 3:
 
         # The runner beggins here..
 
+        onsseter.current_mv_line_dist()
+
         for year in yearsofanalysis:
 
             #eleclimit = float(input('Provide the targeted electrification rate in {}:'.format(year)))
             eleclimit = eleclimits[year]
             time_step = time_steps[year]
             #investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
+
 
             onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step,
                                             start_year, urban_elec_ratio, rural_elec_ratio)
