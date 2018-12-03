@@ -1375,13 +1375,16 @@ class SettlementProcessor:
                                                                       timestep, grid_cap_gen_limit)
 
     def set_scenario_variables(self, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
-                               urban_elec_ratio, rural_elec_ratio):
+                               urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand):
         """
         Set the basic scenario parameters that differ based on urban/rural
         So that they are in the table and can be read directly to calculate LCOEs
         """
 
-        # self.df['GridCellArea'] = 1
+        if end_year_pop == 0:
+            self.df[SET_POP + "{}".format(year)] = self.df[SET_POP + "{}".format(year) + 'Low']
+        else:
+            self.df[SET_POP + "{}".format(year)] = self.df[SET_POP + "{}".format(year) + 'High']
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
@@ -1422,23 +1425,27 @@ class SettlementProcessor:
         logging.info('Setting electrification demand as per target per year')
         if max(self.df['PerCapitaDemand']) == 0:
             wb_tiers_all = {1: 7.738, 2: 43.8, 3: 160.6, 4: 423.4, 5: 598.6}
-            print("""\nWorld Bank Tiers of Electricity Access
-                      1: {} kWh/person/year
-                      2: {} kWh/person/year
-                      3: {} kWh/person/year
-                      4: {} kWh/person/year
-                      5: {} kWh/person/year
-                      6: Customized kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
-                                                              wb_tiers_all[4], wb_tiers_all[5]))
+            # print("""\nWorld Bank Tiers of Electricity Access
+            #           1: {} kWh/person/year
+            #           2: {} kWh/person/year
+            #           3: {} kWh/person/year
+            #           4: {} kWh/person/year
+            #           5: {} kWh/person/year
+            #           6: Customized kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
+            #                                                   wb_tiers_all[4], wb_tiers_all[5]))
 
-            if max(self.df[SET_URBAN]) == 2:
-                wb_tier_urban_centers = int(input('Enter the tier number for urban centers: '))
-                wb_tier_urban_clusters = int(input('Enter the tier number for urban clusters: '))
-                wb_tier_rural = int(input('Enter the tier number for rural: '))
-            else:
-                wb_tier_urban_clusters = int(input('Enter the tier number for urban: '))
-                wb_tier_rural = int(input('Enter the tier number for rural: '))
-                wb_tier_urban_centers = 5
+            wb_tier_urban_centers = int(urban_tier)
+            wb_tier_urban_clusters = int(rural_tier)
+            wb_tier_rural = int(rural_tier)
+
+            # if max(self.df[SET_URBAN]) == 2:
+            #     wb_tier_urban_centers = int(input('Enter the tier number for urban centers: '))
+            #     wb_tier_urban_clusters = int(input('Enter the tier number for urban clusters: '))
+            #     wb_tier_rural = int(input('Enter the tier number for rural: '))
+            # else:
+            #     wb_tier_urban_clusters = int(input('Enter the tier number for urban: '))
+            #     wb_tier_rural = int(input('Enter the tier number for rural: '))
+            #     wb_tier_urban_centers = 5
 
             if wb_tier_urban_centers == 6:
                 wb_tier_urban_centers = 'Custom'
@@ -1466,20 +1473,24 @@ class SettlementProcessor:
             #     self.df.loc[self.df[SET_URBAN] == 2, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban_center)]
 
             # Add commercial demand
-            agri = True if 'y' in input('Include agrcultural demand? <y/n> ') else False
-            if agri:
+            # agri = True if 'y' in input('Include agrcultural demand? <y/n> ') else False
+            # if agri:
+            if int(productive_demand) == 1:
                 self.df['PerCapitaDemand'] += self.df['AgriDemand']
 
-            commercial = True if 'y' in input('Include commercial demand? <y/n> ') else False
-            if commercial:
+            # commercial = True if 'y' in input('Include commercial demand? <y/n> ') else False
+            #if commercial:
+            if int(productive_demand) == 1:
                 self.df['PerCapitaDemand'] += self.df['CommercialDemand']
 
-            health = True if 'y' in input('Include health demand? <y/n> ') else False
-            if health:
+            # health = True if 'y' in input('Include health demand? <y/n> ') else False
+            # if health:
+            if int(productive_demand) == 1:
                 self.df['PerCapitaDemand'] += self.df['HealthDemand']
 
-            edu = True if 'y' in input('Include educational demand? <y/n> ') else False
-            if edu:
+            # edu = True if 'y' in input('Include educational demand? <y/n> ') else False
+            # if edu:
+            if int(productive_demand) == 1:
                 self.df['PerCapitaDemand'] += self.df['EducationDemand']
 
         self.df.loc[self.df[SET_URBAN] == 0, SET_ENERGY_PER_CELL + "{}".format(year)] = \
@@ -1828,7 +1839,7 @@ class SettlementProcessor:
         logging.info('Calculate investment cost')
         self.df[SET_INVESTMENT_COST + "{}".format(year)] = self.df.apply(res_investment_cost, axis=1)
 
-    def apply_limitations(self, eleclimit, year, timestep):
+    def apply_limitations(self, eleclimit, year, timestep, prioritization):
 
         logging.info('Determine electrification limits')
 
@@ -1836,7 +1847,8 @@ class SettlementProcessor:
             self.df[SET_LIMIT + "{}".format(year)] = 1
             elecrate = 1
         else:
-            choice = 2
+            choice = int(prioritization)
+            self.df[SET_LIMIT + "{}".format(year)] = 0
             if choice == 1:  # Lowest investment/capita
                 elecrate = 0
                 min_investment = 0
@@ -1971,25 +1983,6 @@ class SettlementProcessor:
 
         print("The electrification rate achieved is {}".format(elecrate))
 
-        ### Fast method attempt
-        # self.df['InvestmentCapita'] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / self.df[SET_POP+"{}".format(year)]
-        # sorted_investment = self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)].copy()
-        # sorted_investment.sort_values(inplace=True)
-        # investment_pop_break = eleclimit * self.df[SET_POP+"{}".format(year)].sum()
-        # cumulative_pop = 0
-        # ii = 0
-        # while cumulative_pop < investment_pop_break:
-        #     cumulative_pop += sorted_investment.iloc[ii]
-        #     ii += 1
-        # investment_cutoff = sorted_investment.iloc[ii - 1]
-        #
-        # self.df.loc[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] <= investment_cutoff, SET_LIMIT + "{}".format(year)] = 1
-        # self.df.loc[self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] > investment_cutoff, SET_LIMIT + "{}".format(year)] = 0
-        #
-        # elecrate = sum(self.df[self.df[SET_LIMIT + "{}".format(year)] == 1][SET_POP + "{}".format(year)]) / \
-        #            self.df[SET_POP + "{}".format(year)].sum()
-        # print("The electrification rate achieved is {}".format(elecrate))
-        ###
 
     def final_decision(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                        sa_diesel_calc, grid_calc, year, end_year, timestep):
@@ -2308,6 +2301,7 @@ class SettlementProcessor:
         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
 
     def delete_redundant_columns(self, year):
+        self.df.fillna(0)
         self.df['ResultsNoTimestep'] = self.df[SET_ELEC_FINAL_CODE + "{}".format(year)]
         del self.df[SET_ELEC_FINAL_CODE + "{}".format(year)]
         del self.df[SET_LCOE_MG_HYDRO + "{}".format(year)]
@@ -2354,7 +2348,7 @@ class SettlementProcessor:
                                             [SET_POP + "{}".format(year)])
 
         df_summary[year][sumtechs[2]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 3) &
-                                                        (self.df[SET_LIMIT + "{}".format(year)] == 1)]
+                                                        (self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_POP + "{}".format(year)] > 0)]
                                             [SET_POP + "{}".format(year)])
 
         df_summary[year][sumtechs[3]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 4) &
@@ -2384,7 +2378,7 @@ class SettlementProcessor:
                                             [SET_NEW_CONNECTIONS + "{}".format(year)])
 
         df_summary[year][sumtechs[9]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 3) &
-                                                        (self.df[SET_LIMIT + "{}".format(year)] == 1)]
+                                                        (self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_POP + "{}".format(year)] > 0)]
                                             [SET_NEW_CONNECTIONS + "{}".format(year)])
 
         df_summary[year][sumtechs[10]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 4) &
@@ -2414,7 +2408,7 @@ class SettlementProcessor:
                                              [SET_NEW_CAPACITY + "{}".format(year)])
 
         df_summary[year][sumtechs[16]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 3) &
-                                                         (self.df[SET_LIMIT + "{}".format(year)] == 1)]
+                                                         (self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_POP + "{}".format(year)] > 0)]
                                              [SET_NEW_CAPACITY + "{}".format(year)])
 
         df_summary[year][sumtechs[17]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 4) &
@@ -2444,7 +2438,7 @@ class SettlementProcessor:
                                              [SET_INVESTMENT_COST + "{}".format(year)])
 
         df_summary[year][sumtechs[23]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 3) &
-                                                         (self.df[SET_LIMIT + "{}".format(year)] == 1)]
+                                                         (self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_POP + "{}".format(year)] > 0)]
                                              [SET_INVESTMENT_COST + "{}".format(year)])
 
         df_summary[year][sumtechs[24]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 4) &
@@ -2462,3 +2456,16 @@ class SettlementProcessor:
         df_summary[year][sumtechs[27]] = sum(self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year)] == 7) &
                                                          (self.df[SET_LIMIT + "{}".format(year)] == 1)]
                                              [SET_INVESTMENT_COST + "{}".format(year)])
+
+        df_summary[year][sumtechs[28]] = min(self.df[SET_POP + "{}".format(year)])
+        df_summary[year][sumtechs[29]] = max(self.df[SET_POP + "{}".format(year)])
+        df_summary[year][sumtechs[30]] = min(self.df['GridCellArea'])
+        df_summary[year][sumtechs[31]] = max(self.df['GridCellArea'])
+        df_summary[year][sumtechs[32]] = min(self.df['CurrentMVLineDist'])
+        df_summary[year][sumtechs[33]] = max(self.df['CurrentMVLineDist'])
+        df_summary[year][sumtechs[34]] = min(self.df[SET_ROAD_DIST])
+        df_summary[year][sumtechs[35]] = max(self.df[SET_ROAD_DIST])
+        df_summary[year][sumtechs[36]] = min((self.df[SET_INVESTMENT_COST + "{}".format(year)]) / (self.df[SET_NEW_CONNECTIONS + "{}".format(year)]))
+        df_summary[year][sumtechs[37]] = max((self.df[SET_INVESTMENT_COST + "{}".format(year)]) / (self.df[SET_NEW_CONNECTIONS + "{}".format(year)]))
+
+

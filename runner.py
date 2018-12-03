@@ -142,7 +142,7 @@ elif choice == 3:
         rural_tier = ScenarioParameters.iloc[tierIndex]['RuralTargetTier']
         urban_tier = ScenarioParameters.iloc[tierIndex]['UrbanTargetTier']
         five_year_target = ScenarioParameters.iloc[fiveyearIndex]['5YearTarget']
-        grid_cost = ScenarioParameters.iloc[gridIndex]['GridGenerationCost']
+        grid_price = ScenarioParameters.iloc[gridIndex]['GridGenerationCost']
         sa_pv_capital_cost = ScenarioParameters.iloc[pvIndex]['SA_PV_Cost']
         diesel_price = ScenarioParameters.iloc[dieselIndex]['DieselPrice']
         productive_demand = ScenarioParameters.iloc[productiveIndex]['ProductiveDemand']
@@ -150,8 +150,8 @@ elif choice == 3:
 
         settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
         # settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
-        settlements_out_csv = os.path.join('{}-{}_{}_{}_{}_{}_{}_{}_{}.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
-        summary_csv = os.path.join('{}-{}_{}_{}_{}_{}_{}_{}_{}_summary.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
+        settlements_out_csv = os.path.join('{}-1_{}_{}_{}_{}_{}_{}_{}_{}.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
+        summary_csv = os.path.join('{}-1_{}_{}_{}_{}_{}_{}_{}_{}_summary.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
         # summary_csv = output_dir + 'summary.csv'
 
         onsseter = SettlementProcessor(settlements_in_csv)
@@ -160,8 +160,8 @@ elif choice == 3:
         end_year = SpecsData.iloc[0][SPE_END_YEAR]
         time_step = SpecsData.iloc[0][SPE_TIMESTEP]
 
-        diesel_price = SpecsData.iloc[0][SPE_DIESEL_PRICE_HIGH] if diesel_high else SpecsData.iloc[0][SPE_DIESEL_PRICE_LOW]
-        grid_price = SpecsData.iloc[0][SPE_GRID_PRICE]
+        # diesel_price = SpecsData.iloc[0][SPE_DIESEL_PRICE_HIGH] if diesel_high else SpecsData.iloc[0][SPE_DIESEL_PRICE_LOW]
+        # grid_price = SpecsData.iloc[0][SPE_GRID_PRICE]
         existing_grid_cost_ratio = SpecsData.iloc[0][SPE_EXISTING_GRID_COST_RATIO]
         num_people_per_hh_rural = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_RURAL])
         num_people_per_hh_urban = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_URBAN])
@@ -265,7 +265,7 @@ elif choice == 3:
         # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
 
         onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
-                                        urban_elec_ratio, rural_elec_ratio)
+                                        urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
 
 
         onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
@@ -286,7 +286,7 @@ elif choice == 3:
         onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                        sa_diesel_calc, grid_calc, year, end_year, time_step)
 
-        onsseter.apply_limitations(eleclimit, year, time_step)
+        onsseter.apply_limitations(eleclimit, year, time_step, prioritization)
 
         onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
                                 grid_calc, year, end_year, time_step)
@@ -314,6 +314,18 @@ elif choice == 3:
             for tech in techs:
                 sumtechs.append(element + "_" + tech)
 
+        sumtechs.append('Min_cluster_pop_2030')
+        sumtechs.append('Max_cluster_pop_2030')
+        sumtechs.append('Min_cluster_area')
+        sumtechs.append('Max_cluster_area')
+        sumtechs.append('Min_existing_grid_dist')
+        sumtechs.append('Max_existing_grid_dist')
+        sumtechs.append('Min_road_dist')
+        sumtechs.append('Max_road_dist')
+        sumtechs.append('Min_investment_capita_cost')
+        sumtechs.append('Max_investment_capita_cost')
+
+
         total_rows = len(sumtechs)
 
         df_summary = pd.DataFrame(columns=yearsofanalysis)
@@ -335,7 +347,7 @@ elif choice == 3:
 
 
             onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step,
-                                            start_year, urban_elec_ratio, rural_elec_ratio)
+                                            start_year, urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
 
             onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, year, start_year, end_year, time_step)
 
@@ -353,14 +365,14 @@ elif choice == 3:
             onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
                                            sa_diesel_calc, grid_calc, year, end_year, time_step)
 
-            onsseter.apply_limitations(eleclimit, year, time_step)
+            onsseter.apply_limitations(eleclimit, year, time_step, prioritization)
 
             onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year, end_year, time_step)
 
             onsseter.calc_summaries(df_summary, sumtechs, year)
 
-    df_summary.to_csv(summary_csv, index=sumtechs)
-    onsseter.df.to_csv(settlements_out_csv, index=False)
+        df_summary.to_csv(summary_csv, index=sumtechs)
+        onsseter.df.to_csv(settlements_out_csv, index=False)
 
     # if do_combine:
     #     print('\n --- Combining --- \n')
