@@ -708,8 +708,8 @@ class SettlementProcessor:
         logging.info('Calculate Wind CF')
         self.df[SET_WINDCF] = self.df.apply(get_wind_cf, axis=1)
 
-    def calibrate_pop_and_urban(self, pop_actual, pop_future, urban_current, urban_future, urban_cutoff,
-                                start_year, end_year, time_step):
+    def calibrate_pop_and_urban(self, pop_actual, pop_future_high, pop_future_low, urban_current, urban_future,
+                                urban_cutoff, start_year, end_year, time_step):
         """
         Calibrate the actual current population, the urban split and forecast the future population
         """
@@ -775,33 +775,53 @@ class SettlementProcessor:
         logging.info('Project future population')
 
         if calibrate:
-            urban_growth = (urban_future * pop_future) / (urban_current * pop_actual)
-            rural_growth = ((1 - urban_future) * pop_future) / ((1 - urban_current) * pop_actual)
+            urban_growth_high = (urban_future * pop_future_high) / (urban_modelled * pop_actual)
+            rural_growth_high = ((1 - urban_future) * pop_future_high) / ((1 - urban_modelled) * pop_actual)
 
-            yearly_urban_growth_rate = urban_growth ** (1 / project_life)
-            yearly_rural_growth_rate = rural_growth ** (1 / project_life)
+            yearly_urban_growth_rate_high = urban_growth_high ** (1 / project_life)
+            yearly_rural_growth_rate_high = rural_growth_high ** (1 / project_life)
+
+            urban_growth_low = (urban_future * pop_future_low) / (urban_modelled * pop_actual)
+            rural_growth_low = ((1 - urban_future) * pop_future_low) / ((1 - urban_modelled) * pop_actual)
+
+            yearly_urban_growth_rate_low = urban_growth_low ** (1 / project_life)
+            yearly_rural_growth_rate_low = rural_growth_low ** (1 / project_life)
         else:
-            urban_growth = pop_future / pop_actual
-            rural_growth = pop_future / pop_actual
+            urban_growth_high = pop_future_high / pop_actual
+            rural_growth_high = pop_future_high / pop_actual
 
-            yearly_urban_growth_rate = urban_growth ** (1 / project_life)
-            yearly_rural_growth_rate = rural_growth ** (1 / project_life)
+            yearly_urban_growth_rate_high = urban_growth_high ** (1 / project_life)
+            yearly_rural_growth_rate_high = rural_growth_high ** (1 / project_life)
 
-        self.df[SET_POP_FUTURE] = self.df.apply(lambda row: row[SET_POP_CALIB] * urban_growth
-        if row[SET_URBAN] > 1
-        else row[SET_POP_CALIB] * rural_growth,
-                                                axis=1)
+            urban_growth_low = pop_future_low / pop_actual
+            rural_growth_low = pop_future_low / pop_actual
+
+            yearly_urban_growth_rate_low = urban_growth_low ** (1 / project_life)
+            yearly_rural_growth_rate_low = rural_growth_low ** (1 / project_life)
+
+        # self.df[SET_POP_FUTURE] = self.df.apply(lambda row: row[SET_POP_CALIB] * urban_growth
+        # if row[SET_URBAN] > 1
+        # else row[SET_POP_CALIB] * rural_growth,
+        #                                         axis=1)
 
         yearsofanalysis = [2023, 2030]
         # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
 
         for year in yearsofanalysis:
-            self.df[SET_POP + "{}".format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] *
-                                                                             (yearly_urban_growth_rate ** (
+            self.df[SET_POP + "{}" + 'High'.format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] *
+                                                                             (yearly_urban_growth_rate_high ** (
                                                                                      year - start_year))
             if row[SET_URBAN] > 1
             else row[SET_POP_CALIB] *
-                 (yearly_rural_growth_rate ** (year - start_year)),
+                 (yearly_rural_growth_rate_high ** (year - start_year)),
+                                                                 axis=1)
+
+            self.df[SET_POP + "{}" + 'Low'.format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] *
+                                                                             (yearly_urban_growth_rate_low ** (
+                                                                                     year - start_year))
+            if row[SET_URBAN] > 1
+            else row[SET_POP_CALIB] *
+                 (yearly_rural_growth_rate_low ** (year - start_year)),
                                                                  axis=1)
 
         self.df[SET_POP + "{}".format(start_year)] = self.df.apply(lambda row: row[SET_POP_CALIB], axis=1)

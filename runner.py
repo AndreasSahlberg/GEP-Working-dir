@@ -17,7 +17,7 @@ root.attributes("-topmost", True)
 messagebox.showinfo('OnSSET', 'Open the specs file')
 specs_path = filedialog.askopenfilename()
 
-specs = pd.read_excel(specs_path, index_col=0)
+# specs = pd.read_excel(specs_path, index_col=0)
 
 countries = ['Malawi']
 # countries = str(input('countries: ')).split()
@@ -40,6 +40,7 @@ if choice == 1:
         df.loc[df[SET_COUNTRY] == country].to_csv(base_dir + '.csv', index=False)
 
 elif choice == 2:
+    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsData')
     messagebox.showinfo('OnSSET', 'Open the file containing separated countries')
     base_dir = filedialog.askopenfilename()
     messagebox.showinfo('OnSSET', 'Browse to result folder and name the calibrated file')
@@ -58,25 +59,26 @@ elif choice == 2:
         onsseter.grid_penalties()
         onsseter.calc_wind_cfs()
 
-        pop_actual = specs.loc[country, SPE_POP]
-        pop_future = specs.loc[country, SPE_POP_FUTURE]
-        urban_current = specs.loc[country, SPE_URBAN]
-        urban_future = specs.loc[country, SPE_URBAN_FUTURE]
-        urban_cutoff = specs.loc[country, SPE_URBAN_CUTOFF]
-        start_year = int(specs.loc[country, SPE_START_YEAR])
-        end_year = int(specs.loc[country, SPE_END_YEAR])
-        time_step = int(specs.loc[country, SPE_TIMESTEP])
+        pop_actual = SpecsData.loc[0, SPE_POP]
+        pop_future_high = SpecsData.loc[0, SPE_POP_FUTURE + 'High']
+        pop_future_low = SpecsData.loc[0, SPE_POP_FUTURE + 'Low']
+        urban_current = SpecsData.loc[0, SPE_URBAN]
+        urban_future = SpecsData.loc[0, SPE_URBAN_FUTURE]
+        urban_cutoff = SpecsData.loc[0, SPE_URBAN_CUTOFF]
+        start_year = int(SpecsData.loc[0, SPE_START_YEAR])
+        end_year = int(SpecsData.loc[0, SPE_END_YEAR])
+        time_step = int(SpecsData.loc[0, SPE_TIMESTEP])
 
-        elec_actual = specs.loc[country, SPE_ELEC]
-        pop_cutoff = specs.loc[country, SPE_POP_CUTOFF1]
-        min_night_lights = specs.loc[country, SPE_MIN_NIGHT_LIGHTS]
-        max_grid_dist = specs.loc[country, SPE_MAX_GRID_DIST]
-        max_road_dist = specs.loc[country, SPE_MAX_ROAD_DIST]
-        pop_tot = specs.loc[country, SPE_POP]
-        pop_cutoff2 = specs.loc[country, SPE_POP_CUTOFF2]
-        dist_to_trans = specs.loc[country, SPE_DIST_TO_TRANS]
+        elec_actual = SpecsData.loc[0, SPE_ELEC]
+        pop_cutoff = SpecsData.loc[0, SPE_POP_CUTOFF1]
+        min_night_lights = SpecsData.loc[0, SPE_MIN_NIGHT_LIGHTS]
+        max_grid_dist = SpecsData.loc[0, SPE_MAX_GRID_DIST]
+        max_road_dist = SpecsData.loc[0, SPE_MAX_ROAD_DIST]
+        pop_tot = SpecsData.loc[0, SPE_POP]
+        pop_cutoff2 = SpecsData.loc[0, SPE_POP_CUTOFF2]
+        dist_to_trans = SpecsData.loc[0, SPE_DIST_TO_TRANS]
 
-        urban_cutoff, urban_modelled = onsseter.calibrate_pop_and_urban(pop_actual, pop_future, urban_current,
+        urban_cutoff, urban_modelled = onsseter.calibrate_pop_and_urban(pop_actual, pop_future_high, pop_future_low, urban_current,
                                                                         urban_future, urban_cutoff, start_year, end_year, time_step)
 
         min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2, rural_elec_ratio, urban_elec_ratio = \
@@ -85,22 +87,22 @@ elif choice == 2:
 
         onsseter.grid_reach_estimate(start_year, gridspeed=9999)
 
-        specs.loc[country, SPE_URBAN_MODELLED] = urban_modelled
-        specs.loc[country, SPE_URBAN_CUTOFF] = urban_cutoff
-        specs.loc[country, SPE_MIN_NIGHT_LIGHTS] = min_night_lights
-        specs.loc[country, SPE_MAX_GRID_DIST] = max_grid_dist
-        specs.loc[country, SPE_MAX_ROAD_DIST] = max_road_dist
-        specs.loc[country, SPE_ELEC_MODELLED] = elec_modelled
-        specs.loc[country, SPE_POP_CUTOFF1] = pop_cutoff
-        specs.loc[country, SPE_POP_CUTOFF2] = pop_cutoff2
-        specs.loc[country, 'rural_elec_ratio'] = rural_elec_ratio
-        specs.loc[country, 'urban_elec_ratio'] = urban_elec_ratio
+        SpecsData.loc[0, SPE_URBAN_MODELLED] = urban_modelled
+        SpecsData.loc[0, SPE_URBAN_CUTOFF] = urban_cutoff
+        SpecsData.loc[0, SPE_MIN_NIGHT_LIGHTS] = min_night_lights
+        SpecsData.loc[0, SPE_MAX_GRID_DIST] = max_grid_dist
+        SpecsData.loc[0, SPE_MAX_ROAD_DIST] = max_road_dist
+        SpecsData.loc[0, SPE_ELEC_MODELLED] = elec_modelled
+        SpecsData.loc[0, SPE_POP_CUTOFF1] = pop_cutoff
+        SpecsData.loc[0, SPE_POP_CUTOFF2] = pop_cutoff2
+        SpecsData.loc[0, 'rural_elec_ratio'] = rural_elec_ratio
+        SpecsData.loc[0, 'urban_elec_ratio'] = urban_elec_ratio
 
 
         try:
-            specs.to_excel(specs_path)
+            SpecsData.to_excel(specs_path)
         except ValueError:
-            specs.to_excel(specs_path + '.xlsx')
+            SpecsData.to_excel(specs_path + '.xlsx')
 
         onsseter.df.to_csv(settlements_out_csv, index=False)
 
@@ -116,6 +118,7 @@ elif choice == 3:
     base_dir = filedialog.askopenfilename()
     messagebox.showinfo('OnSSET', 'Browse to result folder and name the scenario to save outputs')
     # output_dir = filedialog.asksaveasfilename()
+    output_dir = filedialog.askdirectory()
 
     print('\n --- Running scenario --- \n')
 
@@ -150,8 +153,8 @@ elif choice == 3:
 
         settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
         # settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
-        settlements_out_csv = os.path.join('{}-1_{}_{}_{}_{}_{}_{}_{}_{}.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
-        summary_csv = os.path.join('{}-1_{}_{}_{}_{}_{}_{}_{}_{}_summary.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
+        settlements_out_csv = os.path.join(output_dir, '{}-1_{}_{}_{}_{}_{}_{}_{}_{}.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
+        summary_csv = os.path.join(output_dir, '{}-1_{}_{}_{}_{}_{}_{}_{}_{}_summary.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
         # summary_csv = output_dir + 'summary.csv'
 
         onsseter = SettlementProcessor(settlements_in_csv)
