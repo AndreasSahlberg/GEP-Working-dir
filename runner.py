@@ -138,34 +138,37 @@ elif choice == 3:
         productiveIndex = ScenarioInfo.iloc[scenario]['Productive_uses_demand']
         prioIndex = ScenarioInfo.iloc[scenario]['Prioritization_algorithm']
 
+        end_year_pop = ScenarioParameters.iloc[popIndex]['PopEndYear']
+        rural_tier = ScenarioParameters.iloc[tierIndex]['RuralTargetTier']
+        urban_tier = ScenarioParameters.iloc[tierIndex]['UrbanTargetTier']
+        five_year_target = ScenarioParameters.iloc[fiveyearIndex]['5YearTarget']
+        grid_cost = ScenarioParameters.iloc[gridIndex]['GridGenerationCost']
+        sa_pv_capital_cost = ScenarioParameters.iloc[pvIndex]['SA_PV_Cost']
+        diesel_price = ScenarioParameters.iloc[dieselIndex]['DieselPrice']
+        productive_demand = ScenarioParameters.iloc[productiveIndex]['ProductiveDemand']
+        prioritization = ScenarioParameters.iloc[prioIndex]['PrioritizationAlgorithm']
+
         settlements_in_csv = base_dir # os.path.join(base_dir, '{}.csv'.format(country))
         # settlements_out_csv = output_dir + '.csv' # os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag))
         settlements_out_csv = os.path.join('{}-{}_{}_{}_{}_{}_{}_{}_{}.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
-        print(settlements_out_csv)
-        summary_csv = output_dir + 'summary.csv'
+        summary_csv = os.path.join('{}-{}_{}_{}_{}_{}_{}_{}_{}_summary.csv'.format(countryID, popIndex, tierIndex, fiveyearIndex, gridIndex, pvIndex, dieselIndex, productiveIndex, prioIndex))
+        # summary_csv = output_dir + 'summary.csv'
 
         onsseter = SettlementProcessor(settlements_in_csv)
 
-        start_year = SpecsData.iloc[SPE_START_YEAR][0]
-        end_year = SpecsData.iloc[SPE_END_YEAR][0]
-        time_step = SpecsData.iloc[SPE_TIMESTEP][0]
+        start_year = SpecsData.iloc[0][SPE_START_YEAR]
+        end_year = SpecsData.iloc[0][SPE_END_YEAR]
+        time_step = SpecsData.iloc[0][SPE_TIMESTEP]
 
-        diesel_price = SpecsData.iloc[SPE_DIESEL_PRICE_HIGH][0] if diesel_high else SpecsData.iloc[SPE_DIESEL_PRICE_LOW][0]
-        grid_price = SpecsData.iloc[SPE_GRID_PRICE][0]
-        existing_grid_cost_ratio = SpecsData.iloc[SPE_EXISTING_GRID_COST_RATIO][0]
-        num_people_per_hh_rural = float(SpecsData.iloc[SPE_NUM_PEOPLE_PER_HH_RURAL][0])
-        num_people_per_hh_urban = float(SpecsData.iloc[SPE_NUM_PEOPLE_PER_HH_URBAN][0])
-        max_grid_extension_dist = float(SpecsData.iloc[SPE_MAX_GRID_EXTENSION_DIST][0])
-        urban_elec_ratio = float(SpecsData.iloc['rural_elec_ratio'][0])
-        rural_elec_ratio = float(SpecsData.iloc['urban_elec_ratio'][0])
-        # energy_per_pp_rural = wb_tiers_all[wb_tier_rural]
-        # energy_per_pp_urban = wb_tiers_all[wb_tier_urban]
-        mg_pv_cap_cost = SpecsData.loc[0, SPE_CAP_COST_MG_PV]
+        diesel_price = SpecsData.iloc[0][SPE_DIESEL_PRICE_HIGH] if diesel_high else SpecsData.iloc[0][SPE_DIESEL_PRICE_LOW]
+        grid_price = SpecsData.iloc[0][SPE_GRID_PRICE]
+        existing_grid_cost_ratio = SpecsData.iloc[0][SPE_EXISTING_GRID_COST_RATIO]
+        num_people_per_hh_rural = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_RURAL])
+        num_people_per_hh_urban = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_URBAN])
+        max_grid_extension_dist = float(SpecsData.iloc[0][SPE_MAX_GRID_EXTENSION_DIST])
+        urban_elec_ratio = float(SpecsData.iloc[0]['rural_elec_ratio'])
+        rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio'])
         grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']
-        #eleclimit = SpecsData.iloc[SPE_ELEC_LIMIT][0]
-        #investlimit = SpecsData.iloc[SPE_INVEST_LIMIT][0]
-
-        #step_year = start_year + time_step
 
 
         Technology.set_default_values(base_year=start_year,
@@ -184,12 +187,12 @@ elif choice == 3:
                                       mv_increase_rate=0.1)
 
         grid_calc = Technology(om_of_td_lines=0.03,
-                               distribution_losses=float(SpecsData.iloc[SPE_GRID_LOSSES][0]),
+                               distribution_losses=float(SpecsData.iloc[0][SPE_GRID_LOSSES]),
                                connection_cost_per_hh=122,
-                               base_to_peak_load_ratio=float(SpecsData.iloc[SPE_BASE_TO_PEAK][0]),
+                               base_to_peak_load_ratio=float(SpecsData.iloc[0][SPE_BASE_TO_PEAK]),
                                capacity_factor=1,
                                tech_life=30,
-                               grid_capacity_investment=float(SpecsData.iloc[SPE_GRID_CAPACITY_INVESTMENT][0]),
+                               grid_capacity_investment=float(SpecsData.iloc[0][SPE_GRID_CAPACITY_INVESTMENT]),
                                grid_penalty_ratio=1,
                                grid_price=grid_price)
 
@@ -216,12 +219,12 @@ elif choice == 3:
                                 base_to_peak_load_ratio=0.9,
                                 tech_life=20,
                                 om_costs=0.018,
-                                capital_cost=mg_pv_cap_cost)
+                                capital_cost=4300)
 
         sa_pv_calc = Technology(base_to_peak_load_ratio=0.9,
                                 tech_life=15,
                                 om_costs=0.018,
-                                capital_cost=5500,
+                                capital_cost=sa_pv_capital_cost,
                                 standalone=True)
 
         mg_diesel_calc = Technology(om_of_td_lines=0.03,
@@ -293,8 +296,9 @@ elif choice == 3:
         ### END OF FIRST RUN
 
         # yearsofanalysis = list(range((start_year + time_step), end_year + 1, time_step))
+
         yearsofanalysis = [2023, 2030]
-        eleclimits = {2023: 0.7, 2030: 1}
+        eleclimits = {2023: five_year_target, 2030: 1}
         time_steps = {2023: 5, 2030: 7}
 
 
