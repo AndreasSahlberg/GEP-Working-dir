@@ -9,6 +9,7 @@ from onsset import *
 import pandas as pd
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from openpyxl import load_workbook
 
 root = tk.Tk()
 root.withdraw()
@@ -98,11 +99,17 @@ elif choice == 2:
         SpecsData.loc[0, 'rural_elec_ratio'] = rural_elec_ratio
         SpecsData.loc[0, 'urban_elec_ratio'] = urban_elec_ratio
 
+        book = load_workbook(specs_path)
+        writer = pd.ExcelWriter(specs_path, engine='openpyxl')
+        writer.book = book
+        SpecsData.to_excel(writer, sheet_name='SpecsDataCalib', index=False)
+        writer.save()
+        writer.close()
 
-        try:
-            SpecsData.to_excel(specs_path)
-        except ValueError:
-            SpecsData.to_excel(specs_path + '.xlsx')
+        # try:
+        #     SpecsData.to_excel(specs_path, sheet_name='SpecsDataCalibrated')
+        # except ValueError:
+        #     SpecsData.to_excel(specs_path + '.xlsx', sheet_name='SpecsDataCalibrated')
 
         onsseter.df.to_csv(settlements_out_csv, index=False)
 
@@ -125,7 +132,7 @@ elif choice == 3:
     ScenarioInfo = pd.read_excel(specs_path, sheet_name='ScenarioInfo')
     Scenarios = ScenarioInfo['Scenario']
     ScenarioParameters = pd.read_excel(specs_path, sheet_name='ScenarioParameters')
-    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsData')
+    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsDataCalib')
 
     for scenario in Scenarios:
         # create country_specs here
@@ -163,8 +170,6 @@ elif choice == 3:
         end_year = SpecsData.iloc[0][SPE_END_YEAR]
         time_step = SpecsData.iloc[0][SPE_TIMESTEP]
 
-        # diesel_price = SpecsData.iloc[0][SPE_DIESEL_PRICE_HIGH] if diesel_high else SpecsData.iloc[0][SPE_DIESEL_PRICE_LOW]
-        # grid_price = SpecsData.iloc[0][SPE_GRID_PRICE]
         existing_grid_cost_ratio = SpecsData.iloc[0][SPE_EXISTING_GRID_COST_RATIO]
         num_people_per_hh_rural = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_RURAL])
         num_people_per_hh_urban = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_URBAN])
@@ -258,7 +263,6 @@ elif choice == 3:
 
         ### FIRST RUN - NO TIMESTEP
 
-
         time_step = 12
         year = 2030
         eleclimits = {2030: 1}
@@ -304,8 +308,6 @@ elif choice == 3:
         eleclimits = {2023: five_year_target, 2030: 1}
         time_steps = {2023: 5, 2030: 7}
 
-
-
         # This is used in the calculation of summaries at the end
 
         elements = ["1.Population", "2.New_Connections", "3.Capacity", "4.Investment"]
@@ -328,16 +330,12 @@ elif choice == 3:
         sumtechs.append('Min_investment_capita_cost')
         sumtechs.append('Max_investment_capita_cost')
 
-
         total_rows = len(sumtechs)
 
         df_summary = pd.DataFrame(columns=yearsofanalysis)
 
         for row in range(0, total_rows):
             df_summary.loc[sumtechs[row]] = "Nan"
-
-
-        # The runner beggins here..
 
         onsseter.current_mv_line_dist()
 
@@ -358,10 +356,6 @@ elif choice == 3:
 
             onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
 
-            # if year == end_year:
-            #     onsseter.calculategridyears(start_year, year, gridspeed=10)
-            # else:
-            #     pass
 
             onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc, grid_calc, year)
 
@@ -376,22 +370,3 @@ elif choice == 3:
 
         df_summary.to_csv(summary_csv, index=sumtechs)
         onsseter.df.to_csv(settlements_out_csv, index=False)
-
-    # if do_combine:
-    #     print('\n --- Combining --- \n')
-    #     df_base = pd.DataFrame()
-    #     summaries = pd.DataFrame(columns=countries)
-    #
-    #     for country in countries:
-    #         print(country)
-    #         df_add = pd.read_csv(os.path.join(output_dir, '{}_{}_{}.csv'.format(country, wb_tier_urban, diesel_tag)))
-    #         df_base = df_base.append(df_add, ignore_index=True)
-    #
-    #         summaries[country] = pd.read_csv(os.path.join(output_dir, '{}_{}_{}_summary.csv'.format(country,
-    #                                                                                                 wb_tier_urban,
-    #                                                                                                 diesel_tag)),
-    #                                          squeeze=True, index_col=0)
-    #
-    #     print('saving csv')
-    #     df_base.to_csv(os.path.join(output_dir, '{}_{}.csv'.format(wb_tier_urban, diesel_tag)), index=False)
-    #     summaries.to_csv(os.path.join(output_dir, '{}_{}_summary.csv'.format(wb_tier_urban, diesel_tag)))

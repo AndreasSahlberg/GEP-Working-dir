@@ -808,7 +808,7 @@ class SettlementProcessor:
         # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
 
         for year in yearsofanalysis:
-            self.df[SET_POP + "{}" + 'High'.format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] *
+            self.df[SET_POP + "{}".format(year) + 'High'] = self.df.apply(lambda row: row[SET_POP_CALIB] *
                                                                              (yearly_urban_growth_rate_high ** (
                                                                                      year - start_year))
             if row[SET_URBAN] > 1
@@ -816,7 +816,7 @@ class SettlementProcessor:
                  (yearly_rural_growth_rate_high ** (year - start_year)),
                                                                  axis=1)
 
-            self.df[SET_POP + "{}" + 'Low'.format(year)] = self.df.apply(lambda row: row[SET_POP_CALIB] *
+            self.df[SET_POP + "{}".format(year) + 'Low'] = self.df.apply(lambda row: row[SET_POP_CALIB] *
                                                                              (yearly_urban_growth_rate_low ** (
                                                                                      year - start_year))
             if row[SET_URBAN] > 1
