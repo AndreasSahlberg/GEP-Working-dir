@@ -753,7 +753,8 @@ class SettlementProcessor:
             urban_modelled = 2
             factor = 1
             while abs(urban_modelled - urban_current) > 0.1:
-                self.df.loc[SET_URBAN] = 0
+                # self.df.loc[SET_URBAN] = 0
+                self.df[SET_URBAN] = 0
                 self.df.loc[(self.df[SET_POP_CALIB] > 5000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 350 * factor), SET_URBAN] = 1
                 self.df.loc[(self.df[SET_POP_CALIB] > 50000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 1500 * factor), SET_URBAN] = 2
                 pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()  # REVIEW! CONSIDER ONLY URBAN CENTERS AS URBAN
