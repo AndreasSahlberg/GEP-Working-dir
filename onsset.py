@@ -970,49 +970,67 @@ class SettlementProcessor:
 
         # Update electrification status based on already existing
         if (year - time_step) == start_year:
-            self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1
-                else 0,
-                              axis=1)
+            # self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] = \
+            #     self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1
+            #     else 0,
+            #                   axis=1)
+            self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] = 0
+            self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_GRID + "{}".format(year)] = 1
         else:
-            self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1 or
-                                               (row[SET_ELEC_FINAL_CODE + "{}".format(year - time_step)] == 1 and
-                                                row[SET_LIMIT + "{}".format(year - time_step)] == 1)
-                else 0,
-                              axis=1)
+            # self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] = \
+            #     self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1 or
+            #                                    (row[SET_ELEC_FINAL_CODE + "{}".format(year - time_step)] == 1 and
+            #                                     row[SET_LIMIT + "{}".format(year - time_step)] == 1)
+            #     else 0,
+            #                   axis=1)
+            self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] = 0
+            self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_GRID + "{}".format(year)] = 1
+            self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year - time_step)] == 1) & (self.df[SET_LIMIT + "{}".format(year - time_step)] == 1), SET_ELEC_FUTURE_GRID + "{}".format(year)] = 1
 
         if (year - time_step) == start_year:
-            self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1
-                else 0,
-                              axis=1)
+            # self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = \
+            #     self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1
+            #     else 0,
+            #                   axis=1)
+            self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = 0
+            self.df.loc[self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = 1
         else:
-            self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if (row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1 and
-                                                row[SET_ELEC_FUTURE_GRID + "{}".format(year)] != 1) or
-                                               (row[SET_ELEC_FINAL_CODE + "{}".format(year - time_step)] != 1 and
-                                                row[SET_LIMIT + "{}".format(year - time_step)] == 1)
-                else 0,
-                              axis=1)
+            # self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = \
+                # self.df.apply(lambda row: 1 if (row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1 and
+                #                                 row[SET_ELEC_FUTURE_GRID + "{}".format(year)] != 1) or
+                #                                (row[SET_ELEC_FINAL_CODE + "{}".format(year - time_step)] != 1 and
+                #                                 row[SET_LIMIT + "{}".format(year - time_step)] == 1)
+                # else 0,
+                #               axis=1)
+            self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = 0
+            self.df.loc[(self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1) & (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] != 1), SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = 1
+            self.df.loc[(self.df[SET_ELEC_FINAL_CODE + "{}".format(year - time_step)] != 1) & (self.df[SET_LIMIT + "{}".format(year - time_step)] == 1), SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] = 1
 
         if (year - time_step) == start_year:
-            self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1
-                else 0,
-                              axis=1)
+            # self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = \
+            #     self.df.apply(lambda row: 1 if row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1
+            #     else 0,
+            #                   axis=1)
+            self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = 0
+            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = 1
         else:
-            self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = \
-                self.df.apply(lambda row: 1 if (row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) or
-                                               (row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1) or
-                                               (row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] == 1)
-                else 0,
-                              axis=1)
+            # self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = \
+            #     self.df.apply(lambda row: 1 if (row[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) or
+            #                                    (row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1) or
+            #                                    (row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] == 1)
+            #     else 0,
+            #                   axis=1)
+            self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = 0
+            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = 1
+            self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = 1
+            self.df.loc[self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year - time_step)] == 1, SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = 1
 
-        self.df[SET_LCOE_GRID + "{}".format(year)] = \
-            self.df.apply(lambda row: grid_price if row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1
-            else 99,
-                          axis=1)
+        # self.df[SET_LCOE_GRID + "{}".format(year)] = \
+            # self.df.apply(lambda row: grid_price if row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1
+            # else 99,
+            #               axis=1)
+        self.df[SET_LCOE_GRID + "{}".format(year)] = 99
+        self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1, SET_LCOE_GRID + "{}".format(year)] = grid_price
 
     def current_mv_line_dist(self):
         logging.info('Determine current MV line length')
@@ -1684,8 +1702,15 @@ class SettlementProcessor:
                                                                 SET_LCOE_MG_HYDRO + "{}".format(year)]].T.idxmin()
 
         logging.info('Determine minimum tech LCOE')
-        self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = \
-            self.df.apply(lambda row: (row[row[SET_MIN_OFFGRID + "{}".format(year)]]), axis=1)
+        # self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = \
+        #     self.df.apply(lambda row: (row[row[SET_MIN_OFFGRID + "{}".format(year)]]), axis=1)
+        self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = self.df[[SET_LCOE_SA_DIESEL + "{}".format(year),
+                                                                SET_LCOE_SA_PV + "{}".format(year),
+                                                                SET_LCOE_MG_WIND + "{}".format(year),
+                                                                SET_LCOE_MG_DIESEL + "{}".format(year),
+                                                                SET_LCOE_MG_PV + "{}".format(year),
+                                                                SET_LCOE_MG_HYDRO + "{}".format(year)]].T.min()
+
 
         codes = {SET_LCOE_MG_HYDRO + "{}".format(year): 7,
                  SET_LCOE_MG_WIND + "{}".format(year): 6,
@@ -1724,8 +1749,15 @@ class SettlementProcessor:
                                                                 SET_LCOE_MG_HYDRO + "{}".format(year)]].T.idxmin()
 
         logging.info('Determine minimum overall LCOE')
-        self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = \
-            self.df.apply(lambda row: (row[row[SET_MIN_OVERALL + "{}".format(year)]]), axis=1)
+        # self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = \
+        #     self.df.apply(lambda row: (row[row[SET_MIN_OVERALL + "{}".format(year)]]), axis=1)
+        self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = self.df[[SET_LCOE_GRID + "{}".format(year),
+                                                                     SET_LCOE_SA_DIESEL + "{}".format(year),
+                                                                     SET_LCOE_SA_PV + "{}".format(year),
+                                                                     SET_LCOE_MG_WIND + "{}".format(year),
+                                                                     SET_LCOE_MG_DIESEL + "{}".format(year),
+                                                                     SET_LCOE_MG_PV + "{}".format(year),
+                                                                     SET_LCOE_MG_HYDRO + "{}".format(year)]].T.min()
 
         logging.info('Add technology codes')
         codes = {SET_LCOE_GRID + "{}".format(year): 1,
@@ -2011,24 +2043,31 @@ class SettlementProcessor:
 
         logging.info('Determine final electrification decision')
 
-        self.df[SET_ELEC_FINAL_GRID + "{}".format(year)] = \
-            self.df.apply(lambda row: 1
-            if (row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1) or
-               (row[SET_LIMIT + "{}".format(year)] == 1 and
-                row[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1 and
-                row[SET_GRID_REACH_YEAR] <= year)
-            else 0, axis=1)
-        self.df[SET_ELEC_FINAL_OFFGRID + "{}".format(year)] = \
-            self.df.apply(lambda row: 1
-            if (row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] == 1 and
-                row[SET_MIN_OVERALL_CODE + "{}".format(year)] != 1) or
-               (row[SET_LIMIT + "{}".format(year)] == 1 and
-                row[SET_ELEC_FINAL_GRID + "{}".format(year)] == 0) or
-               (row[SET_LIMIT + "{}".format(year)] == 1 and
-                row[SET_MIN_OVERALL_CODE + "{}".format(
-                    year)] == 1 and
-                row[SET_GRID_REACH_YEAR] > year)
-            else 0, axis=1)
+        # self.df[SET_ELEC_FINAL_GRID + "{}".format(year)] = \
+        #         #     self.df.apply(lambda row: 1
+        #         #     if (row[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1) or
+        #         #        (row[SET_LIMIT + "{}".format(year)] == 1 and
+        #         #         row[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1 and
+        #         #         row[SET_GRID_REACH_YEAR] <= year)
+        #         #     else 0, axis=1)
+        #         # self.df[SET_ELEC_FINAL_OFFGRID + "{}".format(year)] = \
+        #         #     self.df.apply(lambda row: 1
+        #         #     if (row[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] == 1 and
+        #         #         row[SET_MIN_OVERALL_CODE + "{}".format(year)] != 1) or
+        #         #        (row[SET_LIMIT + "{}".format(year)] == 1 and
+        #         #         row[SET_ELEC_FINAL_GRID + "{}".format(year)] == 0) or
+        #         #        (row[SET_LIMIT + "{}".format(year)] == 1 and
+        #         #         row[SET_MIN_OVERALL_CODE + "{}".format(
+        #         #             year)] == 1 and
+        #         #         row[SET_GRID_REACH_YEAR] > year)
+        #         #     else 0, axis=1)
+        self.df[SET_ELEC_FINAL_GRID + "{}".format(year)] = 0
+        self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1), SET_ELEC_FINAL_GRID + "{}".format(year)] = 1
+        self.df.loc[(self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1) & (self.df[SET_GRID_REACH_YEAR] <= year), SET_ELEC_FINAL_GRID + "{}".format(year)] = 1
+        self.df[SET_ELEC_FINAL_OFFGRID + "{}".format(year)] = 0
+        self.df.loc[(self.df[SET_ELEC_FUTURE_OFFGRID + "{}".format(year)] == 1) & (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] != 1), SET_ELEC_FINAL_OFFGRID + "{}".format(year)] = 1
+        self.df.loc[(self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_ELEC_FINAL_GRID + "{}".format(year)] == 0), SET_ELEC_FINAL_OFFGRID + "{}".format(year)] = 1
+        self.df.loc[(self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] == 0) & (self.df[SET_GRID_REACH_YEAR] > year), SET_ELEC_FINAL_OFFGRID + "{}".format(year)] = 1
 
         self.df.loc[(self.df[SET_LIMIT + "{}".format(year)] == 1) &
                     (self.df[SET_ELEC_FINAL_GRID + "{}".format(year)] == 1),
@@ -2209,7 +2248,7 @@ class SettlementProcessor:
                 return 0
 
         logging.info('Calculate LV investment cost')
-        self.df['InvestmentCostLV' + "{}".format(year)] = self.df.apply(res_investment_cost_lv, axis=1)
+        # self.df['InvestmentCostLV' + "{}".format(year)] = self.df.apply(res_investment_cost_lv, axis=1)
 
         def res_investment_cost_mv(row):
             min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
@@ -2231,7 +2270,7 @@ class SettlementProcessor:
                 return 0
 
         logging.info('Calculate MV investment cost')
-        self.df['InvestmentCostMV' + "{}".format(year)] = self.df.apply(res_investment_cost_mv, axis=1)
+        # self.df['InvestmentCostMV' + "{}".format(year)] = self.df.apply(res_investment_cost_mv, axis=1)
 
         def res_investment_cost_hv(row):
             min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
@@ -2253,7 +2292,7 @@ class SettlementProcessor:
                 return 0
 
         logging.info('Calculate HV investment cost')
-        self.df['InvestmentCostHV' + "{}".format(year)] = self.df.apply(res_investment_cost_hv, axis=1)
+        # self.df['InvestmentCostHV' + "{}".format(year)] = self.df.apply(res_investment_cost_hv, axis=1)
 
         def res_investment_cost_transformer(row):
             min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
@@ -2275,8 +2314,7 @@ class SettlementProcessor:
                 return 0
 
         logging.info('Calculate transformer investment cost')
-        self.df['InvestmentCostTransformer' + "{}".format(year)] = self.df.apply(res_investment_cost_transformer,
-                                                                                 axis=1)
+        # self.df['InvestmentCostTransformer' + "{}".format(year)] = self.df.apply(res_investment_cost_transformer, axis=1)
 
         def res_investment_cost_connection(row):
             min_code = row[SET_ELEC_FINAL_CODE + "{}".format(year)]
@@ -2298,7 +2336,7 @@ class SettlementProcessor:
                 return 0
 
         logging.info('Calculate connection investment cost')
-        self.df['InvestmentCostConnection' + "{}".format(year)] = self.df.apply(res_investment_cost_connection, axis=1)
+       #  self.df['InvestmentCostConnection' + "{}".format(year)] = self.df.apply(res_investment_cost_connection, axis=1)
 
         def infrastructure_cost(row):
             if row[SET_NEW_CONNECTIONS + "{}".format(year)] > 0 and row[SET_ELEC_FINAL_CODE + "{}".format(year)] == 1:
@@ -2307,16 +2345,11 @@ class SettlementProcessor:
                         + row['InvestmentCostTransformer' + "{}".format(year)] +
                         row['InvestmentCostConnection' + "{}".format(year)]) / (
                                row[SET_NEW_CONNECTIONS + "{}".format(year)] / row[SET_NUM_PEOPLE_PER_HH])
-                # return (row[SET_INVESTMENT_COST + "{}".format(year)] + row['InvestmentCostLV' + "{}".format(year)]
-                #         + row['InvestmentCostMV' + "{}".format(year)] + row['InvestmentCostHV' + "{}".format(year)]
-                #         + row['InvestmentCostTransformer' + "{}".format(year)] +
-                #         row['InvestmentCostConnection' + "{}".format(year)]) / row[
-                #            SET_NEW_CONNECTIONS + "{}".format(year)]
             else:
                 return 0
 
         logging.info('Calculating average infrastructure cost for grid connection')
-        self.df['InfrastructureCapitaCost' + "{}".format(year)] = self.df.apply(infrastructure_cost, axis=1)
+        # self.df['InfrastructureCapitaCost' + "{}".format(year)] = self.df.apply(infrastructure_cost, axis=1)
 
         # Update the actual electrification column with results
         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
