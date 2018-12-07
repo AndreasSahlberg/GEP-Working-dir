@@ -337,7 +337,7 @@ class Technology:
                 cluster_mv_lines_length = 2 * transformer_radius * no_of_service_transf
 
             hh_area = grid_cell_area / total_nodes
-            hh_diameter = 2* ((hh_area / pi) ** 0.5)
+            hh_diameter = 2 * ((hh_area / pi) ** 0.5)
 
             transformer_lv_lines_length = hh_diameter * total_nodes
             No_of_HV_MV_subs = 0
@@ -800,10 +800,6 @@ class SettlementProcessor:
             yearly_urban_growth_rate_low = urban_growth_low ** (1 / project_life)
             yearly_rural_growth_rate_low = rural_growth_low ** (1 / project_life)
 
-        # self.df[SET_POP_FUTURE] = self.df.apply(lambda row: row[SET_POP_CALIB] * urban_growth
-        # if row[SET_URBAN] > 1
-        # else row[SET_POP_CALIB] * rural_growth,
-        #                                         axis=1)
 
         yearsofanalysis = [2023, 2030]
         # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
