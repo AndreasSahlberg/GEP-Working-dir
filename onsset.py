@@ -811,13 +811,14 @@ class SettlementProcessor:
         rural_pop = (self.df.loc[self.df[SET_URBAN] < 2, SET_POP_CALIB].sum())  # Calibrate current electrification
         total_pop = self.df[SET_POP_CALIB].sum()
         total_elec_ratio = elec_actual
-        urban_elec_ratio = 0.487
-        rural_elec_ratio = 0.039
+        urban_elec_ratio = 0.776
+        rural_elec_ratio = 0.393
         factor = (total_pop * total_elec_ratio) / (urban_pop * urban_elec_ratio + rural_pop * rural_elec_ratio)
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
         # print('factor: ' + str(factor))
         self.df[SET_ELEC_POP] = self.df[SET_POP_CALIB] * self.df['NTLBin'] / self.df['NTLArea']
+        self.df.loc[self.df['NTLArea'] <= 0, [SET_ELEC_POP]] = 0
 
         logging.info('Calibrate current electrification')
         is_round_two = False
@@ -856,7 +857,7 @@ class SettlementProcessor:
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, 'ElecPop'].sum()
                 elec_modelled = pop_elec / pop_tot
             else:
-                self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
+                self.df.loc[(self.df['GridDistCalibElec'] < 50) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
                         self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
                 # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
                 urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
