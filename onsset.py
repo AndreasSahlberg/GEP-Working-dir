@@ -94,6 +94,9 @@ SET_GRID_CELL_AREA = 'GridCellArea'
 SET_MV_CONNECT_DIST = 'MVConnectDist'
 SET_HV_DIST_CURRENT = 'CurrentHVLineDist'
 SET_HV_DIST_PLANNED = 'PlannedHVLineDist'
+SET_MV_DIST_CURRENT = 'CurrentMVLineDist'
+SET_MV_DIST_PLANNED = 'PlannedMVLineDist'
+SET_ELEC_POP = 'ElecPop'
 
 # Columns in the specs file must match these exactly
 SPE_COUNTRY = 'Country'
@@ -536,19 +539,16 @@ class SettlementProcessor:
         self.df[SET_HYDRO] = pd.to_numeric(self.df[SET_HYDRO], errors='coerce')
 
         logging.info('Add column with country name')
-        self.df['Country'] = country
+        self.df[SET_COUNTRY] = country
 
         logging.info('Adding column "ElectrificationOrder"')
-        self.df['ElectrificationOrder'] = 0
-
-        # logging.info['Adding column for per capita demand']
-        # self.df['PerCapitaDemand'] = 0
+        self.df[SET_ELEC_ORDER] = 0
 
         logging.info('Replace null values with zero')
         self.df.fillna(0, inplace=True)
 
         logging.info('Sort by country, Y and X')
-        self.df.sort_values(by=[SET_COUNTRY, SET_Y, SET_X], inplace=True)
+        self.df.sort_values(by=[SET_COUNTRY, SET_Y_DEG, SET_X_DEG], inplace=True)
 
     def grid_penalties(self):
         """
@@ -726,29 +726,6 @@ class SettlementProcessor:
         else:
             calibrate = True
 
-        # if calibrate:
-        #     # Calculate the urban split, by calibrating the cutoff until the target ratio is achieved
-        #     logging.info('Calibrate urban split')
-        #     # sorted_pop = self.df[SET_POP_CALIB].copy(), self.df[SET_POP_CALIB]/self.df['GridCellArea']
-        #     # sorted_pop.sort_values(inplace=True)
-        #     sorted_pop = self.df.copy()
-        #     sorted_pop['Density'] = sorted_pop[SET_POP_CALIB]  # / sorted_pop['GridCellArea']
-        #     sorted_pop.sort_values(by=['Density'], inplace=True)
-        #     urban_pop_break = (1 - urban_current) * self.df[SET_POP_CALIB].sum()
-        #     cumulative_urban_pop = 0
-        #     ii = 0
-        #     while cumulative_urban_pop < urban_pop_break:
-        #         # test = sorted_pop[SET_GRID_CELL_AREA].iloc[ii]
-        #         # if test > 0:
-        #         cumulative_urban_pop += sorted_pop[SET_POP_CALIB].iloc[ii]
-        #         ii += 1
-        #     urban_cutoff = sorted_pop['Density'].iloc[ii - 1]
-        #
-        #     # Assign the 1 (urban)/0 (rural) values to each cell
-        #     # self.df[SET_URBAN] = self.df.apply(lambda row: 2 if (((row[SET_POP_CALIB]/row['GridCellArea']) > urban_cutoff) & (row['GridCellArea'] > 0))  else 0, axis=1)
-        #     self.df[SET_URBAN] = self.df.apply(
-        #         lambda row: 2 if ((row[SET_POP_CALIB] > urban_cutoff) & (row['GridCellArea'] > 0)) else 0, axis=1)
-
         if calibrate:
             urban_modelled = 2
             factor = 1
@@ -840,7 +817,7 @@ class SettlementProcessor:
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
         # print('factor: ' + str(factor))
-        self.df['ElecPop'] = self.df[SET_POP_CALIB] * self.df['NTLBin'] / self.df['NTLArea']
+        self.df[SET_ELEC_POP] = self.df[SET_POP_CALIB] * self.df['NTLBin'] / self.df['NTLArea']
 
         logging.info('Calibrate current electrification')
         is_round_two = False
@@ -853,14 +830,14 @@ class SettlementProcessor:
         max_iterations_two = 60
         self.df[SET_ELEC_CURRENT] = 0
 
-        if max(self.df['TransformerDist']) > 0:
-            self.df['GridDistCalibElec'] = self.df['TransformerDist']
+        if max(self.df[SET_DIST_TO_TRANS]) > 0:
+            self.df['GridDistCalibElec'] = self.df[SET_DIST_TO_TRANS]
             priority = 1
-        elif max(self.df['CurrentMVLineDist']) > 0:
-            self.df['GridDistCalibElec'] = self.df['CurrentMVLineDist']
+        elif max(self.df[SET_MV_DIST_CURRENT]) > 0:
+            self.df['GridDistCalibElec'] = self.df[SET_MV_DIST_CURRENT]
             priority = 1
         else:
-            self.df['GridDistCalibElec'] = self.df['CurrentHVLineDist']
+            self.df['GridDistCalibElec'] = self.df[SET_HV_DIST_CURRENT]
             priority = 2
 
         condition = 0

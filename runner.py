@@ -20,7 +20,7 @@ specs_path = filedialog.askopenfilename()
 
 # specs = pd.read_excel(specs_path, index_col=0)
 
-countries = ['Malawi']
+countries = ['Kenya'] # FIX!
 # countries = str(input('countries: ')).split()
 # countries = specs.index.tolist() if 'all' in countries else countries
 
@@ -138,7 +138,7 @@ elif choice == 3:
         # create country_specs here
         print('Scenario: ' + str(scenario))
         countryID = SpecsData.iloc[0]['CountryCode']
-        print(countryID)
+
         popIndex = ScenarioInfo.iloc[scenario]['Population_Growth']
         tierIndex = ScenarioInfo.iloc[scenario]['Target_electricity_consumption_level']
         fiveyearIndex = ScenarioInfo.iloc[scenario]['Electrification_target_5_years']
