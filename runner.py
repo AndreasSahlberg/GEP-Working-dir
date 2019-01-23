@@ -134,11 +134,11 @@ elif choice == 3:
     ScenarioInfo = pd.read_excel(specs_path, sheet_name='ScenarioInfo')
     Scenarios = ScenarioInfo['Scenario']
     ScenarioParameters = pd.read_excel(specs_path, sheet_name='ScenarioParameters')
-    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsDataCalib')
+    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsData')
 
     for scenario in Scenarios:
         # create country_specs here
-        print('Scenario: ' + str(scenario))
+        print('Scenario: ' + str(scenario)+1)
         countryID = SpecsData.iloc[0]['CountryCode']
 
         popIndex = ScenarioInfo.iloc[scenario]['Population_Growth']
@@ -170,6 +170,7 @@ elif choice == 3:
 
         start_year = SpecsData.iloc[0][SPE_START_YEAR]
         end_year = SpecsData.iloc[0][SPE_END_YEAR]
+        # ToDO Do we need to define the timestep like this? Isn't it better to define the years specifically at least for GEP e.g. [2023, 2030]
         time_step = SpecsData.iloc[0][SPE_TIMESTEP]
 
         existing_grid_cost_ratio = SpecsData.iloc[0][SPE_EXISTING_GRID_COST_RATIO]
