@@ -1436,8 +1436,16 @@ class SettlementProcessor:
                         SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
         logging.info('Setting electrification demand as per target per year')
+        # The MTF approach is given as per yearly household consumption (BEYOND CONNECTIONS Energy Access Redefined, ESMAP, 2015). Tiers in kWh/capita/year depends on the average ppl/hh which is different in every country
+        ppl_hh_average =  (num_people_per_hh_urban + num_people_per_hh_rural)/2
+        tier_1 = 38.7 / ppl_hh_average  # 38.7 refers to kWh/household/year. It is the mean value between Tier 1 and Tier 2
+        tier_2 = 219 / ppl_hh_average
+        tier_3 = 803 / ppl_hh_average
+        tier_4 = 2117 / ppl_hh_average
+        tier_5 = 2993 / ppl_hh_average
+
         if max(self.df['PerCapitaDemand']) == 0:
-            wb_tiers_all = {1: 7.738, 2: 43.8, 3: 160.6, 4: 423.4, 5: 598.6}
+            wb_tiers_all = {1: tier_1, 2: tier_2, 3: tier_3, 4: tier_4, 5: tier_5}
             # print("""\nWorld Bank Tiers of Electricity Access
             #           1: {} kWh/person/year
             #           2: {} kWh/person/year

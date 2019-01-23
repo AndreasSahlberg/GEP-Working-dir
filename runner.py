@@ -138,7 +138,7 @@ elif choice == 3:
 
     for scenario in Scenarios:
         # create country_specs here
-        print('Scenario: ' + str(scenario)+1)
+        print('Scenario: ' + str(scenario+1))
         countryID = SpecsData.iloc[0]['CountryCode']
 
         popIndex = ScenarioInfo.iloc[scenario]['Population_Growth']
