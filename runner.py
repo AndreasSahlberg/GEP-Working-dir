@@ -20,12 +20,14 @@ specs_path = filedialog.askopenfilename()
 
 # specs = pd.read_excel(specs_path, index_col=0)
 
-countries = ['Kenya'] # FIX!
+# TODO Fix this so that it asks the user for the country I reckon.?
+countries = ['Malawi'] # FIX!
 # countries = str(input('countries: ')).split()
 # countries = specs.index.tolist() if 'all' in countries else countries
 
 choice = int(input('Enter 1 to split, 2 to prepare the inputs, 3 to run a scenario: '))
 
+# TODO Do we actually need option 1 anymore? I suggest to remove it and readjust the options
 if choice == 1:
     messagebox.showinfo('OnSSET', 'Open the csv file with GIS data')
     settlements_csv = filedialog.askopenfilename()
