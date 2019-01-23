@@ -97,6 +97,7 @@ SET_HV_DIST_PLANNED = 'PlannedHVLineDist'
 SET_MV_DIST_CURRENT = 'CurrentMVLineDist'
 SET_MV_DIST_PLANNED = 'PlannedMVLineDist'
 SET_ELEC_POP = 'ElecPop'
+SET_WTFtier = "ResidentialDemandTier"
 
 # Columns in the specs file must match these exactly
 SPE_COUNTRY = 'Country'
@@ -149,9 +150,9 @@ class Technology:
     mv_line_capacity = 50  # kW/line
     lv_line_capacity = 10  # kW/line
     lv_line_max_length = 30  # km
-    hv_line_cost = 120000  # USD/km
+    hv_line_cost = 53000  # USD/km
     mv_line_max_length = 50  # km
-    hv_lv_transformer_cost = 3500  # USD/unit
+    hv_lv_transformer_cost = 5000  # USD/unit
     mv_increase_rate = 0.1  # percentage
     existing_grid_cost_ratio = 0.1  # percentage
 
@@ -230,9 +231,9 @@ class Technology:
         """
 
         HV_line_type = 69  # kV
-        HV_line_cost = 110000  # $/km for 69kV
+        HV_line_cost = 28000  # $/km for 69kV
 
-        MV_line_type = 11  # kV
+        MV_line_type = 33  # kV
         MV_line_amperage_limit = 8.0  # Ampere (A)
         MV_line_cost = 9000  # $/km  for 11-33 kV
 
@@ -707,6 +708,25 @@ class SettlementProcessor:
 
         logging.info('Calculate Wind CF')
         self.df[SET_WINDCF] = self.df.apply(get_wind_cf, axis=1)
+
+    def prepare_wtf_tier_columns (self, num_people_per_hh_rural, num_people_per_hh_urban):
+        """ Prepares the five Residential Demand Tier Targets based customized for each country
+        """
+        # The MTF approach is given as per yearly household consumption (BEYOND CONNECTIONS Energy Access Redefined, ESMAP, 2015). Tiers in kWh/capita/year depends on the average ppl/hh which is different in every country
+        logging.info('Populate ResidentialDemandTier columns')
+        tier_num = [1,2,3,4,5]
+        ppl_hh_average = (num_people_per_hh_urban + num_people_per_hh_rural) / 2
+        tier_1 = 38.7 / ppl_hh_average  # 38.7 refers to kWh/household/year. It is the mean value between Tier 1 and Tier 2
+        tier_2 = 219 / ppl_hh_average
+        tier_3 = 803 / ppl_hh_average
+        tier_4 = 2117 / ppl_hh_average
+        tier_5 = 2993 / ppl_hh_average
+
+        wb_tiers_all = {1: tier_1, 2: tier_2, 3: tier_3, 4: tier_4, 5: tier_5}
+
+        for num in tier_num:
+            self.df[SET_WTFtier + "{}".format(num)] = wb_tiers_all[num]
+
 
     def calibrate_pop_and_urban(self, pop_actual, pop_future_high, pop_future_low, urban_current, urban_future,
                                 urban_cutoff, start_year, end_year, time_step):
@@ -1436,16 +1456,9 @@ class SettlementProcessor:
                         SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
         logging.info('Setting electrification demand as per target per year')
-        # The MTF approach is given as per yearly household consumption (BEYOND CONNECTIONS Energy Access Redefined, ESMAP, 2015). Tiers in kWh/capita/year depends on the average ppl/hh which is different in every country
-        ppl_hh_average =  (num_people_per_hh_urban + num_people_per_hh_rural)/2
-        tier_1 = 38.7 / ppl_hh_average  # 38.7 refers to kWh/household/year. It is the mean value between Tier 1 and Tier 2
-        tier_2 = 219 / ppl_hh_average
-        tier_3 = 803 / ppl_hh_average
-        tier_4 = 2117 / ppl_hh_average
-        tier_5 = 2993 / ppl_hh_average
 
         if max(self.df['PerCapitaDemand']) == 0:
-            wb_tiers_all = {1: tier_1, 2: tier_2, 3: tier_3, 4: tier_4, 5: tier_5}
+            # wb_tiers_all = {1: tier_1, 2: tier_2, 3: tier_3, 4: tier_4, 5: tier_5}
             # print("""\nWorld Bank Tiers of Electricity Access
             #           1: {} kWh/person/year
             #           2: {} kWh/person/year

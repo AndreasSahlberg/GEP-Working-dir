@@ -58,6 +58,10 @@ elif choice == 2:
 
         onsseter = SettlementProcessor(settlements_in_csv)
 
+        num_people_per_hh_rural = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_RURAL])
+        num_people_per_hh_urban = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_URBAN])
+
+        onsseter.prepare_wtf_tier_columns(num_people_per_hh_rural, num_people_per_hh_urban)
         onsseter.condition_df(country)
         onsseter.grid_penalties()
         onsseter.calc_wind_cfs()
@@ -155,6 +159,7 @@ elif choice == 3:
         urban_tier = ScenarioParameters.iloc[tierIndex]['UrbanTargetTier']
         five_year_target = ScenarioParameters.iloc[fiveyearIndex]['5YearTarget']
         grid_price = ScenarioParameters.iloc[gridIndex]['GridGenerationCost']
+        # TODO we shall change this. The levers shall apply percentage increaze to both MG and SA PV systems
         sa_pv_capital_cost = ScenarioParameters.iloc[pvIndex]['SA_PV_Cost']
         diesel_price = ScenarioParameters.iloc[dieselIndex]['DieselPrice']
         productive_demand = ScenarioParameters.iloc[productiveIndex]['ProductiveDemand']
@@ -192,14 +197,14 @@ elif choice == 3:
                                       mv_line_capacity=50,
                                       lv_line_capacity=10,
                                       lv_line_max_length=30,
-                                      hv_line_cost=120000,
+                                      hv_line_cost=53000,
                                       mv_line_max_length=50,
-                                      hv_lv_transformer_cost=3500,
+                                      hv_lv_transformer_cost=5000,
                                       mv_increase_rate=0.1)
 
         grid_calc = Technology(om_of_td_lines=0.03,
                                distribution_losses=float(SpecsData.iloc[0][SPE_GRID_LOSSES]),
-                               connection_cost_per_hh=122,
+                               connection_cost_per_hh=125,
                                base_to_peak_load_ratio=float(SpecsData.iloc[0][SPE_BASE_TO_PEAK]),
                                capacity_factor=1,
                                tech_life=30,
@@ -209,28 +214,28 @@ elif choice == 3:
 
         mg_hydro_calc = Technology(om_of_td_lines=0.03,
                                    distribution_losses=0.05,
-                                   connection_cost_per_hh=100,
+                                   connection_cost_per_hh=125,
                                    base_to_peak_load_ratio=1,
                                    capacity_factor=0.5,
                                    tech_life=30,
-                                   capital_cost=2500,
+                                   capital_cost=5000,
                                    om_costs=0.02)
 
         mg_wind_calc = Technology(om_of_td_lines=0.03,
                                   distribution_losses=0.05,
-                                  connection_cost_per_hh=100,
+                                  connection_cost_per_hh=125,
                                   base_to_peak_load_ratio=0.75,
-                                  capital_cost=2300,
-                                  om_costs=0.035,
+                                  capital_cost=2500,
+                                  om_costs=0.02,
                                   tech_life=20)
 
         mg_pv_calc = Technology(om_of_td_lines=0.03,
                                 distribution_losses=0.05,
-                                connection_cost_per_hh=100,
+                                connection_cost_per_hh=125,
                                 base_to_peak_load_ratio=0.9,
                                 tech_life=20,
-                                om_costs=0.018,
-                                capital_cost=4300)
+                                om_costs=0.02,
+                                capital_cost=4300) # TODO This shall e changed as per below at the SAPV
 
         sa_pv_calc = Technology(base_to_peak_load_ratio=0.9,
                                 tech_life=15,
@@ -240,22 +245,22 @@ elif choice == 3:
 
         mg_diesel_calc = Technology(om_of_td_lines=0.03,
                                     distribution_losses=0.05,
-                                    connection_cost_per_hh=100,
+                                    connection_cost_per_hh=125,
                                     base_to_peak_load_ratio=0.5,
                                     capacity_factor=0.7,
                                     tech_life=15,
                                     om_costs=0.1,
                                     efficiency=0.33,
-                                    capital_cost=1200,
+                                    capital_cost=721,
                                     diesel_price=diesel_price,
                                     diesel_truck_consumption=33.7,
                                     diesel_truck_volume=15000)
 
         sa_diesel_calc = Technology(base_to_peak_load_ratio=0.5,
-                                    capacity_factor=0.7,
+                                    capacity_factor=0.5,
                                     tech_life=10,
                                     om_costs=0.1,
-                                    capital_cost=2000,
+                                    capital_cost=938,
                                     diesel_price=diesel_price,
                                     standalone=True,
                                     efficiency=0.28,
