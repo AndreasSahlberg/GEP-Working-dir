@@ -104,8 +104,8 @@ elif choice == 2:
         SpecsData.loc[0, SPE_ELEC_MODELLED] = elec_modelled
         SpecsData.loc[0, SPE_POP_CUTOFF1] = pop_cutoff
         SpecsData.loc[0, SPE_POP_CUTOFF2] = pop_cutoff2
-        SpecsData.loc[0, 'rural_elec_ratio'] = rural_elec_ratio # TODO this is the electrification ratio within each such cluster. 1) if greater than 1 revert 1 and 2) revert also the access rate to the spreadsheet
-        SpecsData.loc[0, 'urban_elec_ratio'] = urban_elec_ratio
+        SpecsData.loc[0, 'rural_elec_ratio_modelled'] = rural_elec_ratio
+        SpecsData.loc[0, 'urban_elec_ratio_modelled'] = urban_elec_ratio
 
         book = load_workbook(specs_path)
         writer = pd.ExcelWriter(specs_path, engine='openpyxl')

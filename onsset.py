@@ -834,7 +834,6 @@ class SettlementProcessor:
         total_elec_ratio = elec_actual
         urban_elec_ratio = elec_actual_urban  # 0.776
         rural_elec_ratio = elec_actual_rural  # 0.393
-        print(urban_pop, urban_elec_ratio, rural_pop, rural_elec_ratio, total_pop)
         factor = (total_pop * total_elec_ratio) / (urban_pop * urban_elec_ratio + rural_pop * rural_elec_ratio)
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
@@ -864,36 +863,68 @@ class SettlementProcessor:
             priority = 2
 
         condition = 0
-        # TODO I have manually set the priority to 2 for the Malawi paper. Please remove the next two lines from official code
-        priority = 2
-        print (priority)
+        # TODO I have manually set the priority to 1 for the Malawi paper. Please remove the next two lines from official code
+        priority = 1
         while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
             urban_electrified = urban_pop * urban_elec_ratio
             rural_electrified = rural_pop * rural_elec_ratio
             if priority == 1:
-                # self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
-                #         self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
-                self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 4) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
-                urban_elec_ratio = urban_electrified / (
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum())
-                rural_elec_ratio = rural_electrified / (
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum())
-                pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_ELEC_POP].sum()
-                elec_modelled = pop_elec / pop_tot
-            else:
-                self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 4.1) & (
-                        self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
-                # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
-                urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
-                        self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()) / urban_electrified
-                rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
-                        self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()) / rural_electrified
+                self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
+                # TODO new addition or fix of estimating rates
+                urban_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()
+                rural_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()
+                urban_elec_factor = urban_elec_modelled / urban_electrified
+                rural_elec_factor = rural_elec_modelled / rural_electrified
+                if urban_elec_factor > 1:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] *= (1/urban_elec_factor)
+                else:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] /= urban_elec_factor
+
+                if rural_elec_factor > 1:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] *= (1/rural_elec_factor)
+                else:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] /= rural_elec_factor
+
+                # urban_elec_ratio = urban_electrified / (
+                #     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum())
+                # rural_elec_ratio = rural_electrified / (
+                #     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum())
+
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_ELEC_POP].sum()
                 elec_modelled = pop_elec / pop_tot
 
-            logging.info('The modelled electrification rate achieved is {}. '
-                         'If this is not acceptable please revise this part of the algorithm'.format(elec_modelled))
+            else:
+                self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 4.1) & (self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
+
+                urban_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()
+                rural_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()
+                urban_elec_factor = urban_elec_modelled / urban_electrified
+                rural_elec_factor = rural_elec_modelled / rural_electrified
+                if urban_elec_factor > 1:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] *= (
+                    1 / urban_elec_factor)
+                else:
+                    self.df.loc[
+                        (self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] /= urban_elec_factor
+
+                if rural_elec_factor > 1:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] *= (
+                    1 / rural_elec_factor)
+                else:
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] /= rural_elec_factor
+
+                # urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()) / urban_electrified
+                # rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()) / rural_electrified
+                pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_ELEC_POP].sum()
+                elec_modelled = pop_elec / pop_tot
+
+            urban_elec_ratio = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum() / urban_pop
+            rural_elec_ratio = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum() / rural_pop
+
+            logging.info('The modelled electrification rate achieved is {0:.2f}.'
+                         'Urban elec. rate is {1:.2f} and Rural elec. rate is {2:.2f}. \n'
+                         'If this is not acceptable please revise this part of the algorithm'.format(elec_modelled, urban_elec_ratio, rural_elec_ratio))
             condition = 1
 
         self.df[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] = \
