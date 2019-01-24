@@ -121,12 +121,13 @@ SPE_EXISTING_GRID_COST_RATIO = 'ExistingGridCostRatio'
 SPE_MAX_GRID_DIST = 'MaxGridDist'
 SPE_ELEC = 'ElecActual'  # Actual current percentage electrified population (0 - 1)
 SPE_ELEC_MODELLED = 'ElecModelled'  # The modelled version after calibration (for comparison)
+SPE_ELEC_URBAN = 'Urban_elec_ratio'   # Actual electrification for urban areas
+SPE_ELEC_RURAL = 'Rural_elec_ratio'   # Actual electrification for rural areas
 SPE_MIN_NIGHT_LIGHTS = 'MinNightLights'
 SPE_MAX_GRID_EXTENSION_DIST = 'MaxGridExtensionDist'
 SPE_MAX_ROAD_DIST = 'MaxRoadDist'
 SPE_POP_CUTOFF1 = 'PopCutOffRoundOne'
 SPE_POP_CUTOFF2 = 'PopCutOffRoundTwo'
-SPE_CAP_COST_MG_PV = "Cap_Cost_MG_PV"
 SPE_ELEC_LIMIT = "ElecLimit"
 SPE_INVEST_LIMIT = "InvestmentLimit"
 SPE_DIST_TO_TRANS = "DistToTrans"
@@ -822,7 +823,7 @@ class SettlementProcessor:
 
         return urban_cutoff, urban_modelled
 
-    def elec_current_and_future(self, elec_actual, pop_cutoff, dist_to_trans, min_night_lights,
+    def elec_current_and_future(self, elec_actual, elec_actual_urban, elec_actual_rural, pop_cutoff, dist_to_trans, min_night_lights,
                                 max_grid_dist, max_road_dist, pop_tot, pop_cutoff2, start_year):
         """
         Calibrate the current electrification status, and future 'pre-electrification' status
@@ -831,8 +832,8 @@ class SettlementProcessor:
         rural_pop = (self.df.loc[self.df[SET_URBAN] < 2, SET_POP_CALIB].sum())  # Calibrate current electrification
         total_pop = self.df[SET_POP_CALIB].sum()
         total_elec_ratio = elec_actual
-        urban_elec_ratio = 0.776
-        rural_elec_ratio = 0.393
+        urban_elec_ratio = elec_actual_urban  # 0.776
+        rural_elec_ratio = elec_actual_rural  # 0.393
         factor = (total_pop * total_elec_ratio) / (urban_pop * urban_elec_ratio + rural_pop * rural_elec_ratio)
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor

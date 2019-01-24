@@ -77,6 +77,8 @@ elif choice == 2:
         time_step = int(SpecsData.loc[0, SPE_TIMESTEP])
 
         elec_actual = SpecsData.loc[0, SPE_ELEC]
+        elec_actual_urban = SpecsData.loc[0, SPE_ELEC_URBAN]
+        elec_actual_rural = SpecsData.loc[0, SPE_ELEC_RURAL]
         pop_cutoff = SpecsData.loc[0, SPE_POP_CUTOFF1]
         min_night_lights = SpecsData.loc[0, SPE_MIN_NIGHT_LIGHTS]
         max_grid_dist = SpecsData.loc[0, SPE_MAX_GRID_DIST]
@@ -89,7 +91,7 @@ elif choice == 2:
                                                                         urban_future, urban_cutoff, start_year, end_year, time_step)
 
         min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2, rural_elec_ratio, urban_elec_ratio = \
-            onsseter.elec_current_and_future(elec_actual, pop_cutoff, dist_to_trans, min_night_lights, max_grid_dist,
+            onsseter.elec_current_and_future(elec_actual, elec_actual_urban, elec_actual_rural, pop_cutoff, dist_to_trans, min_night_lights, max_grid_dist,
                                              max_road_dist, pop_tot, pop_cutoff2, start_year)
 
         onsseter.grid_reach_estimate(start_year, gridspeed=9999)
@@ -102,8 +104,8 @@ elif choice == 2:
         SpecsData.loc[0, SPE_ELEC_MODELLED] = elec_modelled
         SpecsData.loc[0, SPE_POP_CUTOFF1] = pop_cutoff
         SpecsData.loc[0, SPE_POP_CUTOFF2] = pop_cutoff2
-        SpecsData.loc[0, 'rural_elec_ratio'] = rural_elec_ratio
-        SpecsData.loc[0, 'urban_elec_ratio'] = urban_elec_ratio
+        SpecsData.loc[0, 'rural_elec_ratio_modelled'] = rural_elec_ratio
+        SpecsData.loc[0, 'urban_elec_ratio_modelled'] = urban_elec_ratio
 
         book = load_workbook(specs_path)
         writer = pd.ExcelWriter(specs_path, engine='openpyxl')
@@ -138,7 +140,7 @@ elif choice == 3:
     ScenarioInfo = pd.read_excel(specs_path, sheet_name='ScenarioInfo')
     Scenarios = ScenarioInfo['Scenario']
     ScenarioParameters = pd.read_excel(specs_path, sheet_name='ScenarioParameters')
-    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsData')
+    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsDataCalib')
 
     for scenario in Scenarios:
         # create country_specs here
@@ -182,8 +184,8 @@ elif choice == 3:
         num_people_per_hh_rural = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_RURAL])
         num_people_per_hh_urban = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_URBAN])
         max_grid_extension_dist = float(SpecsData.iloc[0][SPE_MAX_GRID_EXTENSION_DIST])
-        urban_elec_ratio = float(SpecsData.iloc[0]['rural_elec_ratio'])
-        rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio'])
+        urban_elec_ratio = float(SpecsData.iloc[0]['rural_elec_ratio_modelled'])
+        rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio_modelled'])
         grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']
 
 
