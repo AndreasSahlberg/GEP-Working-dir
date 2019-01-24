@@ -750,7 +750,7 @@ class SettlementProcessor:
         if calibrate:
             urban_modelled = 2
             factor = 1
-            while abs(urban_modelled - urban_current) > 0.1:
+            while abs(urban_modelled - urban_current) > 0.01:
                 # self.df.loc[SET_URBAN] = 0
                 self.df[SET_URBAN] = 0
                 self.df.loc[(self.df[SET_POP_CALIB] > 5000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 350 * factor), SET_URBAN] = 1
@@ -828,8 +828,8 @@ class SettlementProcessor:
         """
         Calibrate the current electrification status, and future 'pre-electrification' status
         """
-        urban_pop = (self.df.loc[self.df[SET_URBAN] == 2, SET_POP_CALIB].sum())  # Calibrate current electrification
-        rural_pop = (self.df.loc[self.df[SET_URBAN] < 2, SET_POP_CALIB].sum())  # Calibrate current electrification
+        urban_pop = (self.df.loc[self.df[SET_URBAN] >= 1, SET_POP_CALIB].sum())  # Calibrate current electrification # TODO I have changed the following 2 lines so as to consider urban areas with value 1. This is what is also included in the population calibration
+        rural_pop = (self.df.loc[self.df[SET_URBAN] < 1, SET_POP_CALIB].sum())  # Calibrate current electrification
         total_pop = self.df[SET_POP_CALIB].sum()
         total_elec_ratio = elec_actual
         urban_elec_ratio = elec_actual_urban  # 0.776
@@ -863,6 +863,9 @@ class SettlementProcessor:
             priority = 2
 
         condition = 0
+        # TODO I have manually set the priority to 2 for the Malawi paper. Please remove the next two lines from official code
+        priority = 2
+        print (priority)
         while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
             urban_electrified = urban_pop * urban_elec_ratio
@@ -878,8 +881,8 @@ class SettlementProcessor:
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, 'ElecPop'].sum()
                 elec_modelled = pop_elec / pop_tot
             else:
-                self.df.loc[(self.df['GridDistCalibElec'] < 50) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
-                        self.df[SET_POP_CALIB] > 50), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 4.1) & (
+                        self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
                 # self.df.loc[(self.df['GridDistCalibElec'] < 0.8), SET_ELEC_CURRENT] = 1
                 urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (
                         self.df[SET_URBAN] == 2), SET_POP_CALIB].sum()) / urban_electrified
