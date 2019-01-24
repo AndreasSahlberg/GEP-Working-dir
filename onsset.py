@@ -864,7 +864,7 @@ class SettlementProcessor:
 
         condition = 0
         # TODO I have manually set the priority to 2 for the Malawi paper. Please remove the next two lines from official code
-        priority = 2
+        priority = 1
         print (priority)
         while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
@@ -873,11 +873,11 @@ class SettlementProcessor:
             if priority == 1:
                 # self.df.loc[(self.df['GridDistCalibElec'] < 1) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
                 #         self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
-                self.df.loc[(self.df['GridDistCalibElec'] < 3) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 4) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
                 urban_elec_ratio = urban_electrified / (
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] == 2), 'ElecPop'].sum())
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] >= 1), 'ElecPop'].sum()) # TODO I have also changed this so as to reflect urban/rural accordingly
                 rural_elec_ratio = rural_electrified / (
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] < 2), 'ElecPop'].sum())
+                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] < 1), 'ElecPop'].sum())
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, 'ElecPop'].sum()
                 elec_modelled = pop_elec / pop_tot
             else:
