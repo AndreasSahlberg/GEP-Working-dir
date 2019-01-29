@@ -802,6 +802,7 @@ class SettlementProcessor:
         yearsofanalysis = [2023, 2030]
         # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
 
+        # TODO We shall add a rounding up agent to population because 1) is physically makes more sense and 2) will reduce the size of the output csv file
         for year in yearsofanalysis:
             self.df[SET_POP + "{}".format(year) + 'High'] = self.df.apply(lambda row: row[SET_POP_CALIB] *
                                                                              (yearly_urban_growth_rate_high ** (
@@ -828,6 +829,7 @@ class SettlementProcessor:
         """
         Calibrate the current electrification status, and future 'pre-electrification' status
         """
+        #TODO The way this works now, for all urban or rural settlements that fit the conditioning, the population SET_ELEC_POP is reduced by equal amount so that we match urban/rural national statistics respectively. We might need to improve this.
         urban_pop = (self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum())  # Calibrate current electrification
         rural_pop = (self.df.loc[self.df[SET_URBAN] <= 1, SET_POP_CALIB].sum())  # Calibrate current electrification
         total_pop = self.df[SET_POP_CALIB].sum()
@@ -1456,39 +1458,56 @@ class SettlementProcessor:
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
+        # TODO This need to be changed based on the "newly created" column SET_ELEC_POP
         if year - time_step == start_year:
-            self.df.loc[
-                (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] == 2),
-                SET_NEW_CONNECTIONS + "{}".format(year)] = \
-                (self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * self.df['ElecPop'] / self.df[SET_POP] * self.df[SET_POP + "{}".format(year - time_step)])
-            self.df.loc[
-                (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] < 2),
-                SET_NEW_CONNECTIONS + "{}".format(year)] = \
-                (self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * self.df['ElecPop'] / self.df[SET_POP] * self.df[
-                    SET_POP + "{}".format(year - time_step)])
+            # Assign new connections to those that are already electrified to a certain percent
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1), SET_NEW_CONNECTIONS + "{}".format(year)] = \
+                (self.df[SET_POP + "{}".format(year)] - self.df[SET_ELEC_POP])
+            # Assign new connections to those that are not currently electrified
             self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
+            # Some conditioning to eliminate negative values if existing by mistake
             self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = 0
+
+            # self.df.loc[
+            #     (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] == 2),
+            #     SET_NEW_CONNECTIONS + "{}".format(year)] = \
+            #     (self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * self.df['ElecPop'] / self.df[SET_POP] * self.df[SET_POP + "{}".format(year - time_step)])
+            # self.df.loc[
+            #     (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1) & (self.df[SET_URBAN] < 2),
+            #     SET_NEW_CONNECTIONS + "{}".format(year)] = \
+            #     (self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * self.df['ElecPop'] / self.df[SET_POP] * self.df[
+            #         SET_POP + "{}".format(year - time_step)])
+
         else:
+            # Assign new connections to settlements that are already electrified
             self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = \
                 (self.df[SET_POP + "{}".format(year)] - self.df[SET_POP + "{}".format(year - time_step)])
+
+            # Assign new connections to settlements that were initially electrified but not prioritized during the timestep
+            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) &
+                        (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1),
+                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - self.df[SET_ELEC_POP]
+
+            # Assing new connections to settlements that have not been electrified
             self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
                     self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 0),
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
-            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
-                    self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] == 2),
-                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[
-                                                                       SET_POP + "{}".format(year)] - urban_elec_ratio * \
-                                                                   self.df[SET_POP + "{}".format(start_year)]
-            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
-                    self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] < 2),
-                        SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[
-                                                                       SET_POP + "{}".format(year)] - rural_elec_ratio * \
-                                                                   self.df[SET_POP + "{}".format(start_year)]
-            self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0,
-                        SET_NEW_CONNECTIONS + "{}".format(year)] = 0
+
+            # Some conditioning to eliminate negative values if existing by mistake
+            self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0, SET_NEW_CONNECTIONS + "{}".format(year)] = 0
+
+            # self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
+            #         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] == 2),
+            #             SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * \
+            #                                                        self.df[SET_POP + "{}".format(start_year)]
+            #
+            # self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
+            #         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] < 2),
+            #             SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * \
+            #                                                        self.df[SET_POP + "{}".format(start_year)]
 
         logging.info('Setting electrification demand as per target per year')
 
@@ -1569,6 +1588,7 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_URBAN] == 2, SET_ENERGY_PER_CELL + "{}".format(year)] = \
             self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
+        # TODO Is this really necessary? Maybe when we run without timestep? If not delete?
         # if year - time_step == start_year:
         self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
             self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
@@ -1932,7 +1952,7 @@ class SettlementProcessor:
         else:
             choice = int(prioritization)
             self.df[SET_LIMIT + "{}".format(year)] = 0
-            if choice == 1:  # Lowest investment/capita
+            if choice == 1:  # Lowest investment/capita # TODO This is not working properly (to my understanding). Already electrified cells (intensification) are not prioritized.. and elec status resutls to 0. We shall modify SET_LIMIT accordingly
                 elecrate = 0
                 min_investment = 0
                 self.df['InvestmentCapita' + "{}".format(year)] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / \
@@ -2091,6 +2111,7 @@ class SettlementProcessor:
         #         #             year)] == 1 and
         #         #         row[SET_GRID_REACH_YEAR] > year)
         #         #     else 0, axis=1)
+        # TODO If SET_LIMIT is modified correctly, we ll not need so much detail here..
         self.df[SET_ELEC_FINAL_GRID + "{}".format(year)] = 0
         self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year)] == 1), SET_ELEC_FINAL_GRID + "{}".format(year)] = 1
         self.df.loc[(self.df[SET_LIMIT + "{}".format(year)] == 1) & (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1) & (self.df[SET_GRID_REACH_YEAR] <= year), SET_ELEC_FINAL_GRID + "{}".format(year)] = 1
@@ -2381,8 +2402,8 @@ class SettlementProcessor:
         logging.info('Calculating average infrastructure cost for grid connection')
         # self.df['InfrastructureCapitaCost' + "{}".format(year)] = self.df.apply(infrastructure_cost, axis=1)
 
-        # Update the actual electrification column with results
-        self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
+        # Update the actual electrification column with results # TODO this is not correct. It creates problems. I suggest deleting
+        #self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
 
     def delete_redundant_columns(self, year):
         self.df.fillna(0)

@@ -272,46 +272,46 @@ elif choice == 3:
 
         # Used to identify the steps and include them in the results
 
-        ### FIRST RUN - NO TIMESTEP
-
-        time_step = 12
-        year = 2030
-        eleclimits = {2030: 1}
-
-        # eleclimit = float(input('Provide the targeted electrification rate in {}:'.format(year)))
-        eleclimit = eleclimits[year]
-        # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
-
-        onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
-                                        urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
-
-
-        onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-                                          sa_diesel_calc, year, start_year, end_year, time_step)
-
-        if year - time_step == start_year:
-            onsseter.current_mv_line_dist()
-
-        onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
-
-
-
-        onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
-
-        onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
-                                 grid_calc, year)
-
-        onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-                       sa_diesel_calc, grid_calc, year, end_year, time_step)
-
-        onsseter.apply_limitations(eleclimit, year, time_step, prioritization)
-
-        onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
-                                grid_calc, year, end_year, time_step)
-
-        onsseter.delete_redundant_columns(year)
-
-        ### END OF FIRST RUN
+        # ### FIRST RUN - NO TIMESTEP
+        #
+        # time_step = 12
+        # year = 2030
+        # eleclimits = {2030: 1}
+        #
+        # # eleclimit = float(input('Provide the targeted electrification rate in {}:'.format(year)))
+        # eleclimit = eleclimits[year]
+        # # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
+        #
+        # onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
+        #                                 urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
+        #
+        #
+        # onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+        #                                   sa_diesel_calc, year, start_year, end_year, time_step)
+        #
+        # if year - time_step == start_year:
+        #     onsseter.current_mv_line_dist()
+        #
+        # onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
+        #
+        #
+        #
+        # onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
+        #
+        # onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+        #                          grid_calc, year)
+        #
+        # onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+        #                sa_diesel_calc, grid_calc, year, end_year, time_step)
+        #
+        # onsseter.apply_limitations(eleclimit, year, time_step, prioritization)
+        #
+        # onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+        #                         grid_calc, year, end_year, time_step)
+        #
+        # onsseter.delete_redundant_columns(year)
+        #
+        # ### END OF FIRST RUN
 
         # yearsofanalysis = list(range((start_year + time_step), end_year + 1, time_step))
 
