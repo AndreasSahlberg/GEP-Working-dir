@@ -767,7 +767,7 @@ class SettlementProcessor:
         pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
         urban_modelled = pop_urb / pop_actual
 
-        logging.info('The modelled urban ratio is {}. '
+        print('The modelled urban ratio is {}. '
                      'In case this is not acceptable please revise this part of the code'.format(urban_modelled))
 
         # Project future population, with separate growth rates for urban and rural
@@ -832,8 +832,8 @@ class SettlementProcessor:
         rural_pop = (self.df.loc[self.df[SET_URBAN] <= 1, SET_POP_CALIB].sum())  # Calibrate current electrification
         total_pop = self.df[SET_POP_CALIB].sum()
         total_elec_ratio = elec_actual
-        urban_elec_ratio = elec_actual_urban  # 0.776
-        rural_elec_ratio = elec_actual_rural  # 0.393
+        urban_elec_ratio = elec_actual_urban
+        rural_elec_ratio = elec_actual_rural
         factor = (total_pop * total_elec_ratio) / (urban_pop * urban_elec_ratio + rural_pop * rural_elec_ratio)
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
@@ -863,15 +863,14 @@ class SettlementProcessor:
             priority = 2
 
         condition = 0
-        # TODO I have manually set the priority to 1 for the Malawi paper. Please remove the next two lines from official code
-        priority = 1
+        #priority = 1
         while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
             urban_electrified = urban_pop * urban_elec_ratio
             rural_electrified = rural_pop * rural_elec_ratio
             if priority == 1:
+                print('We have identified the existence of transformers or MV lines as input data; therefore we proceed using those for the calibration')
                 self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
-                # TODO new addition or fix of estimating rates
                 urban_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()
                 rural_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()
                 urban_elec_factor = urban_elec_modelled / urban_electrified
@@ -879,12 +878,12 @@ class SettlementProcessor:
                 if urban_elec_factor > 1:
                     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] *= (1/urban_elec_factor)
                 else:
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] /= urban_elec_factor
+                    print("The urban settlements identified as electrified are lower than in statistics; Please re-adjust the calibration conditions")
 
                 if rural_elec_factor > 1:
                     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] *= (1/rural_elec_factor)
                 else:
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] /= rural_elec_factor
+                    print("The rural settlements identified as electrified are lower than in statistics; Please re-adjust the calibration conditions")
 
                 # urban_elec_ratio = urban_electrified / (
                 #     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum())
@@ -895,7 +894,8 @@ class SettlementProcessor:
                 elec_modelled = pop_elec / pop_tot
 
             else:
-                self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 4.1) & (self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
+                print('No transformers or MV lines were identified as input data; therefore we proceed to the calibration with HV line info')
+                self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
 
                 urban_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()
                 rural_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()
@@ -905,14 +905,13 @@ class SettlementProcessor:
                     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] *= (
                     1 / urban_elec_factor)
                 else:
-                    self.df.loc[
-                        (self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP] /= urban_elec_factor
+                    print("The urban settlements identified as electrified are lower than in statistics; Please re-adjust the calibration conditions")
 
                 if rural_elec_factor > 1:
                     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] *= (
                     1 / rural_elec_factor)
                 else:
-                    self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP] /= rural_elec_factor
+                    print("The rural settlements identified as electrified are lower than in statistics; Please re-adjust the calibration conditions")
 
                 # urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()) / urban_electrified
                 # rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()) / rural_electrified
@@ -922,7 +921,7 @@ class SettlementProcessor:
             urban_elec_ratio = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum() / urban_pop
             rural_elec_ratio = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum() / rural_pop
 
-            logging.info('The modelled electrification rate achieved is {0:.2f}.'
+            print('The modelled electrification rate achieved is {0:.2f}.'
                          'Urban elec. rate is {1:.2f} and Rural elec. rate is {2:.2f}. \n'
                          'If this is not acceptable please revise this part of the algorithm'.format(elec_modelled, urban_elec_ratio, rural_elec_ratio))
             condition = 1

@@ -119,6 +119,7 @@ elif choice == 2:
         # except ValueError:
         #     SpecsData.to_excel(specs_path + '.xlsx', sheet_name='SpecsDataCalibrated')
 
+        logging.info('Calibration finished. Results are transferred to the csv file')
         onsseter.df.to_csv(settlements_out_csv, index=False)
 
 elif choice == 3:
@@ -317,6 +318,7 @@ elif choice == 3:
         yearsofanalysis = [2023, 2030]
         eleclimits = {2023: five_year_target, 2030: 1}
         time_steps = {2023: 5, 2030: 7}
+        print (five_year_target)
 
         # This is used in the calculation of summaries at the end
 
