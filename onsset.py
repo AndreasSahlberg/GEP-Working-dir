@@ -420,7 +420,7 @@ class Technology:
             total_om_cost = td_om_cost
             fuel_cost = self.grid_price
         else:
-            # TODO REVIEW Possibly add substation here for mini-grids
+            # review: possibly add substation here for mini-grids
             conflict_sa_pen = {0: 1, 1: 1.03, 2: 1.07, 3: 1.125, 4: 1.25}
             conflict_mg_pen = {0: 1, 1: 1.05, 2: 1.125, 3: 1.25, 4: 1.5}
             total_lv_lines_length *= 0 if self.standalone else 1
