@@ -1,5 +1,5 @@
 # Author: KTH dESA Last modified by Alexandros Korkovelos
-# Date: 7 March 2018
+# Date: 30 Jan 2019
 # Python version: 3.5
 
 import os
@@ -420,7 +420,7 @@ class Technology:
             total_om_cost = td_om_cost
             fuel_cost = self.grid_price
         else:
-            # REVIEW Possibly add substation here for mini-grids
+            # TODO REVIEW Possibly add substation here for mini-grids
             conflict_sa_pen = {0: 1, 1: 1.03, 2: 1.07, 3: 1.125, 4: 1.25}
             conflict_mg_pen = {0: 1, 1: 1.05, 2: 1.125, 3: 1.25, 4: 1.5}
             total_lv_lines_length *= 0 if self.standalone else 1
@@ -1986,19 +1986,24 @@ class SettlementProcessor:
                         if elecrate < 0.999 * eleclimit:
                             min_investment += 1
                         else:
-                            elecrate += sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1][
-                                                SET_POP + "{}".format(year)]) / self.df[
-                                            SET_POP + "{}".format(year)].sum()
+                            # elecrate += sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1][
+                            #                     SET_POP + "{}".format(year)]) / self.df[
+                            #                 SET_POP + "{}".format(year)].sum()
+                            # print ("The elecrate {:.4f} is higher than eleclimit".format(elecrate))
                             break
                     self.df.loc[
                         (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1), SET_LIMIT + "{}".format(
                             year)] = 1
-                    self.df.loc[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] <= min_investment) & (self.df[
+                    self.df.loc[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] <= min_investment - 1) & (self.df[
                                                                                                            SET_ELEC_FUTURE_GRID + "{}".format(
                                                                                                                year - timestep)] == 0), SET_LIMIT + "{}".format(year)] = 1
                     self.df.loc[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] > min_investment) & (self.df[
                                                                                                           SET_ELEC_FUTURE_GRID + "{}".format(
                                                                                                               year - timestep)] == 0), SET_LIMIT + "{}".format(year)] = 0
+
+                    elecrate = self.df.loc[self.df[SET_LIMIT + "{}".format(year)] == 1, SET_POP + "{}".format(year)].sum() / \
+                               self.df[SET_POP + "{}".format(year)].sum()
+
                 else:
                     while elecrate < eleclimit:
                         elecrate = sum(self.df[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] < min_investment) & (
@@ -2016,6 +2021,9 @@ class SettlementProcessor:
                                                                                                                year)] > min_investment), SET_LIMIT + "{}".format(year)] = 0
                     self.df.loc[
                         (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0), SET_LIMIT + "{}".format(year)] = 0
+
+                    elecrate = self.df.loc[self.df[SET_LIMIT + "{}".format(year)] == 1, SET_POP + "{}".format(year)].sum() / \
+                               self.df[SET_POP + "{}".format(year)].sum()
 
             elif choice == 3:  # Prioritize lowest LCOE (Not tested)
                 elecrate = 1
@@ -2081,7 +2089,7 @@ class SettlementProcessor:
                     else:
                         still_looking = False
 
-        print("The electrification rate achieved in {} is {}".format(year, elecrate))
+        print("The electrification rate achieved in {} is {:.1f} %".format(year, elecrate*100))
 
 
     def final_decision(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,

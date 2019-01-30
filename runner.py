@@ -1,7 +1,7 @@
 # Pulls all the other functions together to make magic!
 #
 # Author: KTH dESA Last modified by Alexandros Korkovelos
-# Date: 7 March 2018
+# Date: 30 January 2019
 # Python version: 3.5
 
 import os
@@ -270,8 +270,7 @@ elif choice == 3:
                                     diesel_truck_consumption=14,
                                     diesel_truck_volume=300)
 
-        # Used to identify the steps and include them in the results
-
+        # TODO Activating this part will run the analysis without time step and help identify differences in the two modelling approaches
         # ### FIRST RUN - NO TIMESTEP
         #
         # time_step = 12
@@ -315,12 +314,12 @@ elif choice == 3:
 
         # yearsofanalysis = list(range((start_year + time_step), end_year + 1, time_step))
 
+        # ### HERE STARTS THE ACTUAL ANALYSIS WITH THE INCLUSION OF TIME STEPS
+
+        # TODO One shall define here the years of analysis together with access targets per interval
         yearsofanalysis = [2023, 2030]
         eleclimits = {2023: five_year_target, 2030: 1}
         time_steps = {2023: 5, 2030: 7}
-        #print (five_year_target)
-
-        # This is used in the calculation of summaries at the end
 
         elements = ["1.Population", "2.New_Connections", "3.Capacity", "4.Investment"]
         techs = ["Grid", "SA_Diesel", "SA_PV", "MG_Diesel", "MG_PV", "MG_Wind", "MG_Hydro"]
