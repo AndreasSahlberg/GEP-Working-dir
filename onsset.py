@@ -208,7 +208,7 @@ class Technology:
         """
 
         # RUN_PARAM: Here are the assumptions related to cost and physical properties of grid extension elements
-        # Review - A final revision is needed before publishing
+        # REVIEW - A final revision is needed before publishing
         HV_line_type = 69                   # kV
         HV_line_cost = 28000                # $/km for 69kV
 
@@ -344,7 +344,7 @@ class Technology:
             return HV_km, MV_km, cluster_mv_lines_length, LV_km, no_of_service_transf, \
                    No_of_HV_MV_subs, No_of_MV_MV_subs, No_of_HV_LV_subs, No_of_MV_LV_subs, \
                    consumption, peak_load, total_nodes
-
+        # REVIEW - Andreas, the new connections column was modified; Please check whether this has created any problem in this version of the code as I find it hard to follow without comments. I assume this is to secure we do not oversize the network .? I believe it is fine though
         if people != new_connections and (prev_code == 1 or prev_code == 4 or prev_code == 5 or
                                           prev_code == 6 or prev_code == 7):
             HV_km1, MV_km1, cluster_mv_lines_length1, cluster_lv_lines_length1, no_of_service_transf1, \
@@ -1430,7 +1430,7 @@ class SettlementProcessor:
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
-        # REVIEW - This was changed based on the "newly created" column SET_ELEC_POP please review
+        # REVIEW - This was changed based on your "newly created" column SET_ELEC_POP. Please review and check whether this creates any problem at your distribution_network function using people/new connections and energy_per_settlement/total_energy_per_settlement
         if year - time_step == start_year:
             # Assign new connections to those that are already electrified to a certain percent
             self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1), SET_NEW_CONNECTIONS + "{}".format(year)] = \
@@ -1474,7 +1474,7 @@ class SettlementProcessor:
         logging.info('Setting electrification demand as per target per year')
 
         if max(self.df['PerCapitaDemand']) == 0:
-
+            # RUN_PARAM: This shall be changed if different urban/rural categorization is decided
             wb_tier_urban_centers = int(urban_tier)
             wb_tier_urban_clusters = int(rural_tier)
             wb_tier_rural = int(rural_tier)
@@ -1497,9 +1497,10 @@ class SettlementProcessor:
 
             self.df['PerCapitaDemand'] = 0
 
-            # Define if a settlement is Urban or Rural
+            # RUN_PARAM: This shall be changed if different urban/rural categorization is decided
+            # Create new columns assigning number of people per household as per Urban/Rural type
             self.df.loc[self.df[SET_URBAN] == 0, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_rural
-            self.df.loc[self.df[SET_URBAN] == 1, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
+            self.df.loc[self.df[SET_URBAN] == 1, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_rural
             self.df.loc[self.df[SET_URBAN] == 2, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
 
             # Define per capita residential demand
@@ -1541,7 +1542,6 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_URBAN] == 2, SET_ENERGY_PER_CELL + "{}".format(year)] = \
             self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
-        # TODO Is this really necessary? Maybe when we run without timestep? If not, delete? Check if this is used and where.
         # if year - time_step == start_year:
         self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
             self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
@@ -1549,9 +1549,7 @@ class SettlementProcessor:
             self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 2, SET_TOTAL_ENERGY_PER_CELL] = \
             self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
-        # self.df[SET_TOTAL_ENERGY_PER_CELL] = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
-        # else:
-        #     self.df[SET_TOTAL_ENERGY_PER_CELL] += self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
+
 
     def grid_reach_estimate(self, start_year, gridspeed):
         """ Estimates the year of grid arrival based on geospatial characteristics 
@@ -2363,7 +2361,8 @@ class SettlementProcessor:
         logging.info('Calculating average infrastructure cost for grid connection')
         # self.df['InfrastructureCapitaCost' + "{}".format(year)] = self.df.apply(infrastructure_cost, axis=1)
 
-        # Update the actual electrification column with results # TODO this is not correct. It creates problems. I suggest deleting
+        # TODO this is not correct. It creates problems in certain occasions. I have excluded it from the code. In case it doesn't interfere with any additions you made I suggest deleting
+        # Update the actual electrification column with results
         #self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year)] = self.df[SET_LIMIT + "{}".format(year)]
 
     def delete_redundant_columns(self, year):
