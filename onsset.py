@@ -144,20 +144,6 @@ class Technology:
     input parameters.
     """
 
-    discount_rate = 0.08
-    # grid_cell_area = 0.01  # in km2, normally 1km2
-
-    mv_line_cost = 9000  # USD/km
-    lv_line_cost = 5000  # USD/km
-    mv_line_capacity = 50  # kW/line
-    lv_line_capacity = 10  # kW/line
-    lv_line_max_length = 30  # km
-    hv_line_cost = 53000  # USD/km
-    mv_line_max_length = 50  # km
-    hv_lv_transformer_cost = 5000  # USD/unit
-    mv_increase_rate = 0.1  # percentage
-    existing_grid_cost_ratio = 0.1  # percentage
-
     def __init__(self,
                  tech_life,  # in years
                  base_to_peak_load_ratio,
@@ -196,23 +182,12 @@ class Technology:
         self.om_of_td_lines = om_of_td_lines
 
     @classmethod
-    def set_default_values(cls, base_year, start_year, end_year, discount_rate, mv_line_cost, lv_line_cost,
-                           mv_line_capacity, lv_line_capacity, lv_line_max_length, hv_line_cost, mv_line_max_length,
-                           hv_lv_transformer_cost, mv_increase_rate):
+    def set_default_values(cls, base_year, start_year, end_year, discount_rate):
         cls.base_year = base_year
         cls.start_year = start_year
         cls.end_year = end_year
         cls.discount_rate = discount_rate
-        # cls.grid_cell_area = grid_cell_area
-        cls.mv_line_cost = mv_line_cost
-        cls.lv_line_cost = lv_line_cost
-        cls.mv_line_capacity = mv_line_capacity
-        cls.lv_line_capacity = lv_line_capacity
-        cls.lv_line_max_length = lv_line_max_length
-        cls.hv_line_cost = hv_line_cost
-        cls.mv_line_max_length = mv_line_max_length
-        cls.hv_lv_transformer_cost = hv_lv_transformer_cost
-        cls.mv_increase_rate = mv_increase_rate
+
 
     def get_lcoe(self, energy_per_cell, people, num_people_per_hh, start_year, end_year, new_connections,
                  total_energy_per_cell, prev_code, grid_cell_area, conf_status=0, additional_mv_line_length=0,
@@ -232,30 +207,32 @@ class Technology:
         travel_hours required for diesel
         """
 
-        HV_line_type = 69  # kV
-        HV_line_cost = 28000  # $/km for 69kV
+        # RUN_PARAM: Here are the assumptions related to cost and physical properties of grid extension elements
+        # Review - A final revision is needed before publishing
+        HV_line_type = 69                   # kV
+        HV_line_cost = 28000                # $/km for 69kV
 
-        MV_line_type = 33  # kV
-        MV_line_amperage_limit = 8.0  # Ampere (A)
-        MV_line_cost = 9000  # $/km  for 11-33 kV
+        MV_line_type = 33                   # kV
+        MV_line_amperage_limit = 8.0        # Ampere (A)
+        MV_line_cost = 9000                 # $/km  for 11-33 kV
 
-        LV_line_type = 0.240  # kV
-        LV_line_cost = 3000  # $/km for 0.4 kV
-        LV_line_max_length = 0.5  # km
+        LV_line_type = 0.240                # kV
+        LV_line_cost = 3000                 # $/km for 0.4 kV
+        LV_line_max_length = 0.5            # km
 
-        service_Transf_type = 50  # kVa
-        service_Transf_cost = 3500  # $/unit of 50 kVa
-        max_nodes_per_serv_trans = 300  # maximum number of nodes served by each service transformer
-        MV_LV_sub_station_type = 400  # kVa
-        MV_LV_sub_station_cost = 10000  # $/unit of 50 kVa
-        MV_MV_sub_station_cost = 10000  # $/unit of 50 kVa # REVIEW
-        HV_LV_sub_station_type = 1000  # kVa
-        HV_LV_sub_station_cost = 25000  # $/unit of 50 kVa
-        HV_MV_sub_station_cost = 25000  # $/unit of 50 kVa # REVIEW
+        service_Transf_type = 50            # kVa
+        service_Transf_cost = 3500          # $/unit of 50 kVa
+        max_nodes_per_serv_trans = 300      # maximum number of nodes served by each service transformer
+        MV_LV_sub_station_type = 400        # kVa
+        MV_LV_sub_station_cost = 10000      # $/unit of 50 kVa
+        MV_MV_sub_station_cost = 10000      # $/unit of 50 kVa
+        HV_LV_sub_station_type = 1000       # kVa
+        HV_LV_sub_station_cost = 25000      # $/unit of 50 kVa
+        HV_MV_sub_station_cost = 25000      # $/unit of 50 kVa
 
-        # simultaneous_usage = 0.06          # From (2)
-        power_factor = 0.9  # From (1)
-        load_moment = 9643  # for 50mm aluminum conductor under 5% voltage drop (kW m) (2)
+        power_factor = 0.9
+        load_moment = 9643                  # for 50mm aluminum conductor under 5% voltage drop (kW m)
+        # simultaneous_usage = 0.06         # Not used eventually - maybe in an updated version
 
         if people == 0:
             # If there are no people, the investment cost is zero.
@@ -403,10 +380,10 @@ class Technology:
         conf_grid_pen = {0: 1, 1: 1.1, 2: 1.25, 3: 1.5, 4: 2}
         # The investment and O&M costs are different for grid and non-grid solutions
         if self.grid_price > 0:
-            td_investment_cost = (hv_lines_total_length * self.hv_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) +
-                                 mv_lines_connection_length * self.mv_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) +
-                                 total_lv_lines_length * self.lv_line_cost +
-                                 mv_lines_distribution_length * self.mv_line_cost +
+            td_investment_cost = (hv_lines_total_length * HV_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) +
+                                 mv_lines_connection_length * MV_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) +
+                                 total_lv_lines_length * LV_line_cost +
+                                 mv_lines_distribution_length * MV_line_cost +
                                  num_transformers * service_Transf_cost +
                                  total_nodes * self.connection_cost_per_hh +
                                  No_of_HV_LV_substation * HV_LV_sub_station_cost +
@@ -425,8 +402,8 @@ class Technology:
             conflict_mg_pen = {0: 1, 1: 1.05, 2: 1.125, 3: 1.25, 4: 1.5}
             total_lv_lines_length *= 0 if self.standalone else 1
             mv_lines_distribution_length *= 0 if self.standalone else 1
-            mv_total_line_cost = self.mv_line_cost * mv_lines_distribution_length * conflict_mg_pen[conf_status]
-            lv_total_line_cost = self.lv_line_cost * total_lv_lines_length * conflict_mg_pen[conf_status]
+            mv_total_line_cost = MV_line_cost * mv_lines_distribution_length * conflict_mg_pen[conf_status]
+            lv_total_line_cost = LV_line_cost * total_lv_lines_length * conflict_mg_pen[conf_status]
             service_transformer_total_cost = 0 if self.standalone else num_transformers * service_Transf_cost * conflict_mg_pen[conf_status]
             installed_capacity = peak_load / capacity_factor
             capital_investment = installed_capacity * self.capital_cost * conflict_sa_pen[conf_status] if self.standalone \
@@ -490,12 +467,12 @@ class Technology:
             discounted_investments = investments / discount_factor
             return np.sum(discounted_investments) + (self.grid_capacity_investment * peak_load)
         elif get_investment_cost_lv:
-            return total_lv_lines_length * (self.lv_line_cost * conf_grid_pen[conf_status])
+            return total_lv_lines_length * (LV_line_cost * conf_grid_pen[conf_status])
         elif get_investment_cost_mv:
-            return (mv_lines_connection_length * self.mv_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) +
-                    mv_lines_distribution_length * self.mv_line_cost) * conf_grid_pen[conf_status]
+            return (mv_lines_connection_length * MV_line_cost * (1 + self.existing_grid_cost_ratio * elec_loop) +
+                    mv_lines_distribution_length * MV_line_cost) * conf_grid_pen[conf_status]
         elif get_investment_cost_hv:
-            return hv_lines_total_length * (self.hv_line_cost * conf_grid_pen[conf_status]) * \
+            return hv_lines_total_length * (HV_line_cost * conf_grid_pen[conf_status]) * \
                    (1 + self.existing_grid_cost_ratio * elec_loop)
         elif get_investment_cost_transformer:
             return (No_of_HV_LV_substation * HV_LV_sub_station_cost +
@@ -731,7 +708,7 @@ class SettlementProcessor:
 
 
     def calibrate_pop_and_urban(self, pop_actual, pop_future_high, pop_future_low, urban_current, urban_future,
-                                urban_cutoff, start_year, end_year, time_step):
+                                urban_cutoff, start_year, end_year):
         """
         Calibrate the actual current population, the urban split and forecast the future population
         """
@@ -768,7 +745,7 @@ class SettlementProcessor:
         pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
         urban_modelled = pop_urb / pop_actual
 
-        print('The modelled urban ratio is {}. '
+        print('The modelled urban ratio is {:.2f}. '
                      'In case this is not acceptable please revise this part of the code'.format(urban_modelled))
 
         # Project future population, with separate growth rates for urban and rural
@@ -799,11 +776,9 @@ class SettlementProcessor:
             yearly_urban_growth_rate_low = urban_growth_low ** (1 / project_life)
             yearly_rural_growth_rate_low = rural_growth_low ** (1 / project_life)
 
-
+    # RUN_PARAM: Define here the years for which results should be provided in the output file.
         yearsofanalysis = [2023, 2030]
-        # yearsofanalysis = list(range((start_year + time_step),end_year+1,time_step))
 
-        # TODO We shall add a rounding up agent to population because 1) is physically makes more sense and 2) will reduce the size of the output csv file
         for year in yearsofanalysis:
             self.df[SET_POP + "{}".format(year) + 'High'] = self.df.apply(lambda row: row[SET_POP_CALIB] *
                                                                              (yearly_urban_growth_rate_high ** (

@@ -1,7 +1,7 @@
 # Pulls all the other functions together to make magic!
 #
 # Author: KTH dESA Last modified by Alexandros Korkovelos
-# Date: 30 January 2019
+# Date: 31 January 2019
 # Python version: 3.5
 
 import os
@@ -20,14 +20,14 @@ specs_path = filedialog.askopenfilename()
 
 # specs = pd.read_excel(specs_path, index_col=0)
 
-# TODO Fix this so that it asks the user for the country I reckon.?
-countries = ['Malawi'] # FIX!
-# countries = str(input('countries: ')).split()
+# RUN_PARAM: Insert the name of the country you are working on. More countries should be separated using comma e.g. ["Malawi", "Ghana"]
+countries = ['Malawi']
+#countries = str(input('countries: ')).split()
 # countries = specs.index.tolist() if 'all' in countries else countries
 
-choice = int(input('Enter 1 to split, 2 to prepare the inputs, 3 to run a scenario: '))
+choice = int(input('Enter 1 to split (if multiple country run is needed), 2 to prepare/calibrate the GIS input file, 3 to run scenario(s): '))
 
-# TODO Do we actually need option 1 anymore? I suggest to remove it and readjust the options
+# TODO Do we actually need option 1 anymore? I suggest removing it and readjust the options
 if choice == 1:
     messagebox.showinfo('OnSSET', 'Open the csv file with GIS data')
     settlements_csv = filedialog.askopenfilename()
@@ -74,7 +74,6 @@ elif choice == 2:
         urban_cutoff = SpecsData.loc[0, SPE_URBAN_CUTOFF]
         start_year = int(SpecsData.loc[0, SPE_START_YEAR])
         end_year = int(SpecsData.loc[0, SPE_END_YEAR])
-        time_step = int(SpecsData.loc[0, SPE_TIMESTEP])
 
         elec_actual = SpecsData.loc[0, SPE_ELEC]
         elec_actual_urban = SpecsData.loc[0, SPE_ELEC_URBAN]
@@ -88,12 +87,14 @@ elif choice == 2:
         dist_to_trans = SpecsData.loc[0, SPE_DIST_TO_TRANS]
 
         urban_cutoff, urban_modelled = onsseter.calibrate_pop_and_urban(pop_actual, pop_future_high, pop_future_low, urban_current,
-                                                                        urban_future, urban_cutoff, start_year, end_year, time_step)
+                                                                        urban_future, urban_cutoff, start_year, end_year)
 
         min_night_lights, dist_to_trans, max_grid_dist, max_road_dist, elec_modelled, pop_cutoff, pop_cutoff2, rural_elec_ratio, urban_elec_ratio = \
             onsseter.elec_current_and_future(elec_actual, elec_actual_urban, elec_actual_rural, pop_cutoff, dist_to_trans, min_night_lights, max_grid_dist,
                                              max_road_dist, pop_tot, pop_cutoff2, start_year)
 
+        # In case there are limitations in the way grid expansion is moving in a country, this can be reflected through gridspeed.
+        # In this case the parameter is set to a very high value therefore is not taken into account.
         onsseter.grid_reach_estimate(start_year, gridspeed=9999)
 
         SpecsData.loc[0, SPE_URBAN_MODELLED] = urban_modelled
@@ -110,25 +111,18 @@ elif choice == 2:
         book = load_workbook(specs_path)
         writer = pd.ExcelWriter(specs_path, engine='openpyxl')
         writer.book = book
+        # RUN_PARAM: Here the calibrated "specs" data are copied to a new tab called "SpecsDataCalib". This is what will later on be used to feed the model
         SpecsData.to_excel(writer, sheet_name='SpecsDataCalib', index=False)
         writer.save()
         writer.close()
-
-        # try:
-        #     SpecsData.to_excel(specs_path, sheet_name='SpecsDataCalibrated')
-        # except ValueError:
-        #     SpecsData.to_excel(specs_path + '.xlsx', sheet_name='SpecsDataCalibrated')
 
         logging.info('Calibration finished. Results are transferred to the csv file')
         onsseter.df.to_csv(settlements_out_csv, index=False)
 
 elif choice == 3:
 
-
-    # diesel_high = True if 'y' in input('Use high diesel value? <y/n> ') else False
     diesel_high = True
     diesel_tag = 'high' if diesel_high else 'low'
-    #do_combine = True if 'y' in input('Combine countries into a single file? <y/n> ') else False
 
     messagebox.showinfo('OnSSET', 'Open the csv file with calibrated GIS data')
     base_dir = filedialog.askopenfilename()
@@ -144,7 +138,6 @@ elif choice == 3:
     SpecsData = pd.read_excel(specs_path, sheet_name='SpecsDataCalib')
 
     for scenario in Scenarios:
-        # create country_specs here
         print('Scenario: ' + str(scenario+1))
         countryID = SpecsData.iloc[0]['CountryCode']
 
@@ -152,7 +145,7 @@ elif choice == 3:
         tierIndex = ScenarioInfo.iloc[scenario]['Target_electricity_consumption_level']
         fiveyearIndex = ScenarioInfo.iloc[scenario]['Electrification_target_5_years']
         gridIndex = ScenarioInfo.iloc[scenario]['Grid_electricity_generation_cost']
-        pvIndex = ScenarioInfo.iloc[scenario]['SA_PV_cost']
+        pvIndex = ScenarioInfo.iloc[scenario]['PV_cost_adjust']
         dieselIndex = ScenarioInfo.iloc[scenario]['Diesel_price']
         productiveIndex = ScenarioInfo.iloc[scenario]['Productive_uses_demand']
         prioIndex = ScenarioInfo.iloc[scenario]['Prioritization_algorithm']
@@ -162,8 +155,7 @@ elif choice == 3:
         urban_tier = ScenarioParameters.iloc[tierIndex]['UrbanTargetTier']
         five_year_target = ScenarioParameters.iloc[fiveyearIndex]['5YearTarget']
         grid_price = ScenarioParameters.iloc[gridIndex]['GridGenerationCost']
-        # TODO we shall change this. The levers shall apply percentage increaze to both MG and SA PV systems
-        sa_pv_capital_cost = ScenarioParameters.iloc[pvIndex]['SA_PV_Cost']
+        pv_capital_cost_adjust = ScenarioParameters.iloc[pvIndex]['PV_Cost_adjust']
         diesel_price = ScenarioParameters.iloc[dieselIndex]['DieselPrice']
         productive_demand = ScenarioParameters.iloc[productiveIndex]['ProductiveDemand']
         prioritization = ScenarioParameters.iloc[prioIndex]['PrioritizationAlgorithm']
@@ -178,8 +170,6 @@ elif choice == 3:
 
         start_year = SpecsData.iloc[0][SPE_START_YEAR]
         end_year = SpecsData.iloc[0][SPE_END_YEAR]
-        # ToDO Do we need to define the timestep like this? Isn't it better to define the years specifically at least for GEP e.g. [2023, 2030]
-        time_step = SpecsData.iloc[0][SPE_TIMESTEP]
 
         existing_grid_cost_ratio = SpecsData.iloc[0][SPE_EXISTING_GRID_COST_RATIO]
         num_people_per_hh_rural = float(SpecsData.iloc[0][SPE_NUM_PEOPLE_PER_HH_RURAL])
@@ -189,21 +179,11 @@ elif choice == 3:
         rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio_modelled'])
         grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']
 
-
+        # RUN_PARAM: Fill in general and technology specific parameters (e.g. discount rate, losses etc.)
         Technology.set_default_values(base_year=start_year,
                                       start_year=start_year,
                                       end_year=end_year,
-                                      discount_rate=0.08,
-                                      # grid_cell_area=1,
-                                      mv_line_cost=9000,
-                                      lv_line_cost=5000,
-                                      mv_line_capacity=50,
-                                      lv_line_capacity=10,
-                                      lv_line_max_length=30,
-                                      hv_line_cost=53000,
-                                      mv_line_max_length=50,
-                                      hv_lv_transformer_cost=5000,
-                                      mv_increase_rate=0.1)
+                                      discount_rate=0.08)
 
         grid_calc = Technology(om_of_td_lines=0.03,
                                distribution_losses=float(SpecsData.iloc[0][SPE_GRID_LOSSES]),
@@ -238,12 +218,12 @@ elif choice == 3:
                                 base_to_peak_load_ratio=0.9,
                                 tech_life=20,
                                 om_costs=0.02,
-                                capital_cost=4300) # TODO This shall e changed as per below at the SAPV
+                                capital_cost=4300 * pv_capital_cost_adjust)
 
         sa_pv_calc = Technology(base_to_peak_load_ratio=0.9,
                                 tech_life=15,
                                 om_costs=0.018,
-                                capital_cost=sa_pv_capital_cost,
+                                capital_cost=5500 * pv_capital_cost_adjust,
                                 standalone=True)
 
         mg_diesel_calc = Technology(om_of_td_lines=0.03,
@@ -270,16 +250,15 @@ elif choice == 3:
                                     diesel_truck_consumption=14,
                                     diesel_truck_volume=300)
 
-        # TODO Activating this part will run the analysis without time step and help identify differences in the two modelling approaches
-        # ### FIRST RUN - NO TIMESTEP
+        # RUN_PARAM: Activating (un-commenting) lines 254-294 will run the analysis without time step and help identify differences in the two modelling approaches
+        # ### RUN - NO TIMESTEP
         #
-        # time_step = 12
-        # year = 2030
-        # eleclimits = {2030: 1}
+        # # RUN_PARAM: Fill in the next 3 parameters accordingly. Remember this specifies a run with no intermediate step
+        # time_step = 12            # Years between final and start year
+        # year = 2030               # Final year
+        # eleclimits = {2030: 1}    # Access goal in the final year
         #
-        # # eleclimit = float(input('Provide the targeted electrification rate in {}:'.format(year)))
         # eleclimit = eleclimits[year]
-        # # investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
         #
         # onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
         #                                 urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
@@ -312,11 +291,9 @@ elif choice == 3:
         #
         # ### END OF FIRST RUN
 
-        # yearsofanalysis = list(range((start_year + time_step), end_year + 1, time_step))
-
         # ### HERE STARTS THE ACTUAL ANALYSIS WITH THE INCLUSION OF TIME STEPS
 
-        # TODO One shall define here the years of analysis together with access targets per interval
+        # RUN_PARAM: One shall define here the years of analysis (excluding start year) together with access targets per interval and timestep duration
         yearsofanalysis = [2023, 2030]
         eleclimits = {2023: five_year_target, 2030: 1}
         time_steps = {2023: 5, 2030: 7}
