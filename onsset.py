@@ -397,7 +397,7 @@ class Technology:
             total_om_cost = td_om_cost
             fuel_cost = self.grid_price
         else:
-            # review: possibly add substation here for mini-grids
+            # TODO: Possibly add substation here for mini-grids
             conflict_sa_pen = {0: 1, 1: 1.03, 2: 1.07, 3: 1.125, 4: 1.25}
             conflict_mg_pen = {0: 1, 1: 1.05, 2: 1.125, 3: 1.25, 4: 1.5}
             total_lv_lines_length *= 0 if self.standalone else 1
@@ -724,16 +724,15 @@ class SettlementProcessor:
                 'Use urban definition from GIS layer <y/n> (n=model calibration):') else False
         else:
             calibrate = True
-
+# RUN_PARAM: This is where manual calibration of urban/rural population takes place. The model uses 0, 1, 2 as GHS population layer does. As of this version, urban are only rows with value equal to 2
         if calibrate:
             urban_modelled = 2
             factor = 1
             while abs(urban_modelled - urban_current) > 0.01:
-                # self.df.loc[SET_URBAN] = 0
                 self.df[SET_URBAN] = 0
                 self.df.loc[(self.df[SET_POP_CALIB] > 5000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 350 * factor), SET_URBAN] = 1
                 self.df.loc[(self.df[SET_POP_CALIB] > 50000 * factor) & (self.df[SET_POP_CALIB] / self.df[SET_GRID_CELL_AREA] > 1500 * factor), SET_URBAN] = 2
-                pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()  # REVIEW! CONSIDER ONLY URBAN CENTERS AS URBAN
+                pop_urb = self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum()
                 urban_modelled = pop_urb / pop_actual
                 if urban_modelled > urban_current:
                     factor *= 1.1
@@ -805,7 +804,8 @@ class SettlementProcessor:
         """
         Calibrate the current electrification status, and future 'pre-electrification' status
         """
-        #TODO The way this works now, for all urban or rural settlements that fit the conditioning, the population SET_ELEC_POP is reduced by equal amount so that we match urban/rural national statistics respectively. We might need to improve this.
+        #REVIEW: The way this works now, for all urban or rural settlements that fit the conditioning, the population SET_ELEC_POP is reduced by equal amount so that we match urban/rural national statistics respectively.
+        #TODO We might need to improve this in the future if new data arrive
         urban_pop = (self.df.loc[self.df[SET_URBAN] > 1, SET_POP_CALIB].sum())  # Calibrate current electrification
         rural_pop = (self.df.loc[self.df[SET_URBAN] <= 1, SET_POP_CALIB].sum())  # Calibrate current electrification
         total_pop = self.df[SET_POP_CALIB].sum()
@@ -830,6 +830,7 @@ class SettlementProcessor:
         max_iterations_two = 60
         self.df[SET_ELEC_CURRENT] = 0
 
+        # This if function here skims through T&D columns to identify if any non 0 values exist; Then it defines priority accordingly.
         if max(self.df[SET_DIST_TO_TRANS]) > 0:
             self.df['GridDistCalibElec'] = self.df[SET_DIST_TO_TRANS]
             priority = 1
@@ -846,6 +847,7 @@ class SettlementProcessor:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
             urban_electrified = urban_pop * urban_elec_ratio
             rural_electrified = rural_pop * rural_elec_ratio
+            # RUN_PARAM: Calibration parameters if MV lines or transrofmer location is available
             if priority == 1:
                 print('We have identified the existence of transformers or MV lines as input data; therefore we proceed using those for the calibration')
                 self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
@@ -863,14 +865,10 @@ class SettlementProcessor:
                 else:
                     print("The rural settlements identified as electrified are lower than in statistics; Please re-adjust the calibration conditions")
 
-                # urban_elec_ratio = urban_electrified / (
-                #     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum())
-                # rural_elec_ratio = rural_electrified / (
-                #     self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum())
-
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_ELEC_POP].sum()
                 elec_modelled = pop_elec / pop_tot
 
+            # RUN_PARAM: Calibration parameters if only HV lines are available
             else:
                 print('No transformers or MV lines were identified as input data; therefore we proceed to the calibration with HV line info')
                 self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
@@ -891,8 +889,6 @@ class SettlementProcessor:
                 else:
                     print("The rural settlements identified as electrified are lower than in statistics; Please re-adjust the calibration conditions")
 
-                # urban_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()) / urban_electrified
-                # rural_elec_ratio = (self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()) / rural_electrified
                 pop_elec = self.df.loc[self.df[SET_ELEC_CURRENT] == 1, SET_ELEC_POP].sum()
                 elec_modelled = pop_elec / pop_tot
 
@@ -1434,7 +1430,7 @@ class SettlementProcessor:
 
         logging.info('Calculate new connections')
         # Calculate new connections for grid related purposes
-        # TODO This was changed based on the "newly created" column SET_ELEC_POP
+        # REVIEW - This was changed based on the "newly created" column SET_ELEC_POP please review
         if year - time_step == start_year:
             # Assign new connections to those that are already electrified to a certain percent
             self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1), SET_NEW_CONNECTIONS + "{}".format(year)] = \
@@ -1475,28 +1471,9 @@ class SettlementProcessor:
             # Some conditioning to eliminate negative values if existing by mistake
             self.df.loc[self.df[SET_NEW_CONNECTIONS + "{}".format(year)] < 0, SET_NEW_CONNECTIONS + "{}".format(year)] = 0
 
-            # self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
-            #         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] == 2),
-            #             SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - urban_elec_ratio * \
-            #                                                        self.df[SET_POP + "{}".format(start_year)]
-            #
-            # self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
-            #         self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1) & (self.df[SET_URBAN] < 2),
-            #             SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - rural_elec_ratio * \
-            #                                                        self.df[SET_POP + "{}".format(start_year)]
-
         logging.info('Setting electrification demand as per target per year')
 
         if max(self.df['PerCapitaDemand']) == 0:
-            # wb_tiers_all = {1: tier_1, 2: tier_2, 3: tier_3, 4: tier_4, 5: tier_5}
-            # print("""\nWorld Bank Tiers of Electricity Access
-            #           1: {} kWh/person/year
-            #           2: {} kWh/person/year
-            #           3: {} kWh/person/year
-            #           4: {} kWh/person/year
-            #           5: {} kWh/person/year
-            #           6: Customized kWh/person/year""".format(wb_tiers_all[1], wb_tiers_all[2], wb_tiers_all[3],
-            #                                                   wb_tiers_all[4], wb_tiers_all[5]))
 
             wb_tier_urban_centers = int(urban_tier)
             wb_tier_urban_clusters = int(rural_tier)
@@ -1564,7 +1541,7 @@ class SettlementProcessor:
         self.df.loc[self.df[SET_URBAN] == 2, SET_ENERGY_PER_CELL + "{}".format(year)] = \
             self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
-        # TODO Is this really necessary? Maybe when we run without timestep? If not delete? Check if this is used and where.
+        # TODO Is this really necessary? Maybe when we run without timestep? If not, delete? Check if this is used and where.
         # if year - time_step == start_year:
         self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
             self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
