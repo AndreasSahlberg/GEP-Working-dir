@@ -842,7 +842,7 @@ class SettlementProcessor:
             priority = 2
 
         condition = 0
-        #priority = 1
+        #priority = 2
         while condition == 0:
             # Assign the 1 (electrified)/0 (un-electrified) values to each cell
             urban_electrified = urban_pop * urban_elec_ratio
