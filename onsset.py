@@ -214,21 +214,21 @@ class Technology:
 
         MV_line_type = 33                   # kV
         MV_line_amperage_limit = 8.0        # Ampere (A)
-        MV_line_cost = 9000                 # $/km  for 11-33 kV
+        MV_line_cost = 13000                # $/km  for 11-33 kV
 
         LV_line_type = 0.240                # kV
-        LV_line_cost = 3000                 # $/km for 0.4 kV
+        LV_line_cost = 10000                # $/km for 0.4 kV
         LV_line_max_length = 0.5            # km
 
         service_Transf_type = 50            # kVa
-        service_Transf_cost = 3500          # $/unit of 50 kVa
+        service_Transf_cost = 3500          # $/unit
         max_nodes_per_serv_trans = 300      # maximum number of nodes served by each service transformer
         MV_LV_sub_station_type = 400        # kVa
-        MV_LV_sub_station_cost = 10000      # $/unit of 50 kVa
-        MV_MV_sub_station_cost = 10000      # $/unit of 50 kVa
+        MV_LV_sub_station_cost = 10000      # $/unit
+        MV_MV_sub_station_cost = 10000      # $/unit
         HV_LV_sub_station_type = 1000       # kVa
-        HV_LV_sub_station_cost = 25000      # $/unit of 50 kVa
-        HV_MV_sub_station_cost = 25000      # $/unit of 50 kVa
+        HV_LV_sub_station_cost = 25000      # $/unit
+        HV_MV_sub_station_cost = 25000      # $/unit
 
         power_factor = 0.9
         load_moment = 9643                  # for 50mm aluminum conductor under 5% voltage drop (kW m)
