@@ -251,47 +251,47 @@ elif choice == 3:
                                     diesel_truck_volume=300)
 
         # RUN_PARAM: Activating (un-commenting) lines 254-294 will run the analysis without time step and help identify differences in the two modelling approaches
-        # ### RUN - NO TIMESTEP
-        #
-        # # RUN_PARAM: Fill in the next 3 parameters accordingly. Remember this specifies a run with no intermediate step
-        # time_step = 12            # Years between final and start year
-        # year = 2030               # Final year
-        # eleclimits = {2030: 1}    # Access goal in the final year
-        #
-        # eleclimit = eleclimits[year]
-        #
-        # onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
-        #                                 urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
-        #
-        #
-        # onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-        #                                   sa_diesel_calc, year, start_year, end_year, time_step)
-        #
-        # if year - time_step == start_year:
-        #     onsseter.current_mv_line_dist()
-        #
-        # onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
-        #
-        #
-        #
-        # onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
-        #
-        # onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
-        #                          grid_calc, year)
-        #
-        # onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-        #                sa_diesel_calc, grid_calc, year, end_year, time_step)
-        #
-        # onsseter.apply_limitations(eleclimit, year, time_step, prioritization)
-        #
-        # onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
-        #                         grid_calc, year, end_year, time_step)
-        #
-        # onsseter.delete_redundant_columns(year)
-        #
-        # ### END OF FIRST RUN
+        ### RUN - NO TIMESTEP
 
-        # ### HERE STARTS THE ACTUAL ANALYSIS WITH THE INCLUSION OF TIME STEPS
+        # RUN_PARAM: Fill in the next 3 parameters accordingly. Remember this specifies a run with no intermediate step
+        time_step = 12            # Years between final and start year
+        year = 2030               # Final year
+        eleclimits = {2030: 1}    # Access goal in the final year
+
+        eleclimit = eleclimits[year]
+
+        onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
+                                        urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
+
+
+        onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+                                          sa_diesel_calc, year, start_year, end_year, time_step)
+
+        if year - time_step == start_year:
+            onsseter.current_mv_line_dist()
+
+        onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
+
+
+
+        onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
+
+        onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+                                 grid_calc, year)
+
+        onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+                       sa_diesel_calc, grid_calc, year, end_year, time_step)
+
+        onsseter.apply_limitations(eleclimit, year, time_step, prioritization)
+
+        onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+                                grid_calc, year, end_year, time_step)
+
+        onsseter.delete_redundant_columns(year)
+
+        ### END OF FIRST RUN
+
+        ### HERE STARTS THE ACTUAL ANALYSIS WITH THE INCLUSION OF TIME STEPS
 
         # RUN_PARAM: One shall define here the years of analysis (excluding start year) together with access targets per interval and timestep duration
         yearsofanalysis = [2023, 2030]
