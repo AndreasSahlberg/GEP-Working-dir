@@ -177,7 +177,7 @@ elif choice == 3:
         max_grid_extension_dist = float(SpecsData.iloc[0][SPE_MAX_GRID_EXTENSION_DIST])
         urban_elec_ratio = float(SpecsData.iloc[0]['rural_elec_ratio_modelled'])
         rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio_modelled'])
-        grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']
+        grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']*1000
 
         # RUN_PARAM: Fill in general and technology specific parameters (e.g. discount rate, losses etc.)
         Technology.set_default_values(base_year=start_year,
