@@ -1454,18 +1454,18 @@ class SettlementProcessor:
 
         else:
             # Assign new connections to settlements that are already electrified
-            self.df.loc[self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 1,
+            self.df.loc[self.df[SET_LIMIT + "{}".format(year - time_step)] == 1,
                         SET_NEW_CONNECTIONS + "{}".format(year)] = \
                 (self.df[SET_POP + "{}".format(year)] - self.df[SET_POP + "{}".format(year - time_step)])
 
             # Assign new connections to settlements that were initially electrified but not prioritized during the timestep
-            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) &
-                        (self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 1),
+            self.df.loc[(self.df[SET_LIMIT + "{}".format(year - time_step)] == 0) &
+                        (self.df[SET_LIMIT + "{}".format(start_year)] == 1),
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - self.df[SET_ELEC_POP]
 
             # Assing new connections to settlements that have not been electrified
-            self.df.loc[(self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(year - time_step)] == 0) & (
-                    self.df[SET_ELEC_FUTURE_ACTUAL + "{}".format(start_year)] == 0),
+            self.df.loc[(self.df[SET_LIMIT + "{}".format(year - time_step)] == 0) & (
+                    self.df[SET_LIMIT + "{}".format(start_year)] == 0),
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
 
             # Some conditioning to eliminate negative values if existing by mistake
