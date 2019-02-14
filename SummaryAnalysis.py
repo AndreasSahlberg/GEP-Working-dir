@@ -75,20 +75,20 @@ for scenario in Scenarios:
     capacity_SA = 0
     techs = ["Grid", "SA_Diesel", "SA_PV", "MG_Diesel", "MG_PV", "MG_Wind", "MG_Hydro"]
     for year in years:
-        investment_cost_grid += summary[year]["4.Investment" + "_" + "Grid"]
-        capacity_grid += summary[year]["3.Capacity" + "_" + "Grid"]
-        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_Diesel"]
-        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_PV"]
-        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_Wind"]
-        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_Hydro"]
-        investment_cost_SA += summary[year]["4.Investment" + "_" + "SA_Diesel"]
-        investment_cost_SA += summary[year]["4.Investment" + "_" + "SA_PV"]
-        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_Diesel"]
-        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_PV"]
-        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_Wind"]
-        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_Hydro"]
-        capacity_SA += summary[year]["3.Capacity" + "_" + "SA_Diesel"]
-        capacity_SA += summary[year]["3.Capacity" + "_" + "SA_PV"]
+        investment_cost_grid += summary[year]["4.Investment" + "_" + "Grid"] / 1000000
+        capacity_grid += summary[year]["3.Capacity" + "_" + "Grid"] / 1000
+        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_Diesel"] / 1000000
+        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_PV"] / 1000000
+        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_Wind"] / 1000000
+        investment_cost_MG += summary[year]["4.Investment" + "_" + "MG_Hydro"] / 1000000
+        investment_cost_SA += summary[year]["4.Investment" + "_" + "SA_Diesel"] / 1000000
+        investment_cost_SA += summary[year]["4.Investment" + "_" + "SA_PV"] / 1000000
+        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_Diesel"] / 1000
+        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_PV"] / 1000
+        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_Wind"] / 1000
+        capacity_MG += summary[year]["3.Capacity" + "_" + "MG_Hydro"] / 1000
+        capacity_SA += summary[year]["3.Capacity" + "_" + "SA_Diesel"] / 1000
+        capacity_SA += summary[year]["3.Capacity" + "_" + "SA_PV"] / 1000
         # pop_grid += summary[year]["1.Population"]
 
     pop_grid = summary["2030"]["1.Population_Grid"]
