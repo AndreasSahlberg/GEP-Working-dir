@@ -395,7 +395,7 @@ class Technology:
 
             total_investment_cost = td_investment_cost
             total_om_cost = td_om_cost
-            fuel_cost = self.grid_price
+            fuel_cost = self.grid_price  # / (1 - self.distribution_losses) REVIEW
         else:
             # TODO: Possibly add substation here for mini-grids
             conflict_sa_pen = {0: 1, 1: 1.03, 2: 1.07, 3: 1.125, 4: 1.25}
@@ -1460,12 +1460,12 @@ class SettlementProcessor:
 
             # Assign new connections to settlements that were initially electrified but not prioritized during the timestep
             self.df.loc[(self.df[SET_LIMIT + "{}".format(year - time_step)] == 0) &
-                        (self.df[SET_LIMIT + "{}".format(start_year)] == 1),
+                        (self.df[SET_ELEC_CURRENT] == 1),
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)] - self.df[SET_ELEC_POP]
 
             # Assing new connections to settlements that have not been electrified
             self.df.loc[(self.df[SET_LIMIT + "{}".format(year - time_step)] == 0) & (
-                    self.df[SET_LIMIT + "{}".format(start_year)] == 0),
+                    self.df[SET_ELEC_CURRENT] == 0),
                         SET_NEW_CONNECTIONS + "{}".format(year)] = self.df[SET_POP + "{}".format(year)]
 
             # Some conditioning to eliminate negative values if existing by mistake
