@@ -850,7 +850,7 @@ class SettlementProcessor:
             # RUN_PARAM: Calibration parameters if MV lines or transrofmer location is available
             if priority == 1:
                 print('We have identified the existence of transformers or MV lines as input data; therefore we proceed using those for the calibration')
-                self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1
+                self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1  # REVIEW 500 vs 300
                 urban_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()
                 rural_elec_modelled = self.df.loc[(self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] <= 1), SET_ELEC_POP].sum()
                 urban_elec_factor = urban_elec_modelled / urban_electrified
