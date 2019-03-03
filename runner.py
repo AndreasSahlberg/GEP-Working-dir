@@ -223,7 +223,8 @@ elif choice == 3:
         sa_pv_calc = Technology(base_to_peak_load_ratio=0.9,
                                 tech_life=15,
                                 om_costs=0.02,
-                                capital_cost=5500 * pv_capital_cost_adjust,
+                                capital_cost={0.020: 20000, 0.050: 11050, 0.100: 7660, 0.200: 5780, 0.300: 5070},
+                                #capital_cost=5500 * pv_capital_cost_adjust,
                                 standalone=True)
 
         mg_diesel_calc = Technology(om_of_td_lines=0.02,
