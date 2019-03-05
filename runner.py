@@ -176,7 +176,7 @@ elif choice == 3:
         grid_calc = Technology(om_of_td_lines=0.03,
                                distribution_losses=float(specs[SPE_GRID_LOSSES][country]),
                                connection_cost_per_hh=122,
-                               base_to_peak_load_ratio=float(specs[SPE_BASE_TO_PEAK][country]),
+                               base_to_peak_load_ratio=0.5,
                                capacity_factor=1,
                                tech_life=30,
                                grid_capacity_investment=float(specs[SPE_GRID_CAPACITY_INVESTMENT][country]),
