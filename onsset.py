@@ -87,10 +87,10 @@ SET_ELEC_FINAL_CODE = "FinalElecCode"
 SET_DIST_TO_TRANS = "TransformerDist"
 SET_TOTAL_ENERGY_PER_CELL = "TotalEnergyPerCell"  # all previous + current timestep
 SET_RESIDENTIAL_DEMAND = "ResidentialDemand"
-SET_AGRI_DEMAND = "AgriDemand"
-SET_HEALTH_DEMAND = "HealthDemand"
-SET_EDU_DEMAND = "EducationDemand"
-SET_COMMERCIAL_DEMAND = "CommercialDemand"
+SET_AGRI_DEMAND = 'AgriDemand'
+SET_HEALTH_DEMAND = 'HealthDemand'
+SET_EDU_DEMAND = 'EducationDemand'
+SET_COMMERCIAL_DEMAND = 'CommercialDemand'
 SET_GRID_CELL_AREA = 'GridCellArea'
 SET_MV_CONNECT_DIST = 'MVConnectDist'
 SET_HV_DIST_CURRENT = 'CurrentHVLineDist'
@@ -99,8 +99,12 @@ SET_MV_DIST_CURRENT = 'CurrentMVLineDist'
 SET_MV_DIST_PLANNED = 'PlannedMVLineDist'
 SET_ELEC_POP = 'ElecPop'
 SET_WTFtier = "ResidentialDemandTier"
+SET_TIER = 'Tier'
 SET_INVEST_PER_CAPITA = "InvestmentCapita"
 SET_CAP_MG_HYBRID = "Capacity_Hybrid"
+SET_CALIB_GRID_DIST = 'GridDistCalibElec'
+SET_CAPITA_DEMAND = 'PerCapitaDemand'
+SET_RESIDENTIAL_TIER = 'ResidentialDemandTier'
 
 # Columns in the specs file must match these exactly
 SPE_COUNTRY = 'Country'
@@ -195,8 +199,8 @@ class Technology:
                          max_ghi,  # highest annual GHI value encountered in the GIS data
                          max_travel_hours,  # highest value for travel hours encountered in the GIS data
                          tier,
-                         diesel_no=10, #25,  # number of diesel generators simulated
-                         pv_no=10, #35,  # number of PV panel sizes simulated
+                         diesel_no=5, #25,  # number of diesel generators simulated
+                         pv_no=5, #35,  # number of PV panel sizes simulated
                          n_chg=0.92,  # charge efficiency of battery
                          n_dis=0.92,  # discharge efficiency of battery
                          lpsp=0.05,  # maximum loss of load allowed over the year, in share of kWh
@@ -411,7 +415,8 @@ class Technology:
                  total_energy_per_cell, prev_code, grid_cell_area, conf_status=0, additional_mv_line_length=0,
                  capacity_factor=0,
                  grid_penalty_ratio=1, mv_line_length=0, travel_hours=0, elec_loop=0, productive_nodes=0,
-                 additional_transformer=0, ghi=0, urban=0, urban_hybrid=0, rural_hybrid=0,
+                 additional_transformer=0, ghi=0, urban=0,
+                 hybrid_1=0, hybrid_2=0, hybrid_3=0, hybrid_4=0, hybrid_5=0, tier=0,
                  get_investment_cost=False,
                  get_investment_cost_lv=False, get_investment_cost_mv=False, get_investment_cost_hv=False,
                  get_investment_cost_transformer=False, get_investment_cost_connection=False, mg_hybrid=False,
@@ -479,6 +484,18 @@ class Technology:
         if capacity_factor == 0:
             capacity_factor = self.capacity_factor
 
+        if mg_hybrid:
+            if tier == 1:
+                hybrid = hybrid_1
+            elif tier == 2:
+                hybrid = hybrid_2
+            elif tier == 3:
+                hybrid = hybrid_3
+            elif tier == 4:
+                hybrid = hybrid_4
+            else:
+                hybrid = hybrid_5
+
         def distribution_network(people, energy_per_cell):
             if energy_per_cell <= 0:
                 energy_per_cell = 0.0001
@@ -494,17 +511,13 @@ class Technology:
             average_load = consumption / (1 - self.distribution_losses) / HOURS_PER_YEAR  # kW
 
             # REVIEW
-            if mg_hybrid and urban == 1:
+            if mg_hybrid:
                 # peak_load = average_load / self.base_to_peak_load_ratio  # kW
-                peak_load = urban_hybrid[4] * consumption
-                peak_load = people / num_people_per_hh * urban_hybrid[4] * (1 + self.distribution_losses)
-            elif mg_hybrid and urban == 0:
-                # peak_load = average_load / self.base_to_peak_load_ratio  # kW
-                peak_load = rural_hybrid[4] * consumption
-                peak_load = people / num_people_per_hh * rural_hybrid[4] * (1 + self.distribution_losses)
+                # peak_load = hybrid[4] * consumption
+                peak_load = people / num_people_per_hh * hybrid[4] * (1 + self.distribution_losses)
             else:
                 peak_load = average_load / self.base_to_peak_load_ratio  # kW
-            # peak_load = average_load / self.base_to_peak_load_ratio  # kW
+
             try:
                 int(peak_load)
             except ValueError:
@@ -669,14 +682,10 @@ class Technology:
                                           travel_hours / self.diesel_truck_volume / LHV_DIESEL * 100))
                 renewable_lookup = int(round((ghi - 1000) / 50))
 
-                if urban > 0:  # REVIEW
-                    ref_table = urban_hybrid[0]
-                    ref_investments = urban_hybrid[3]
-                    ref_capacity = urban_hybrid[1] + urban_hybrid[2]
-                elif urban == 0:
-                    ref_table = rural_hybrid[0]
-                    ref_investments = rural_hybrid[3]
-                    ref_capacity = rural_hybrid[1] + rural_hybrid[2]
+                ref_table = hybrid[0]
+                ref_investments = hybrid[3]
+                ref_capacity = hybrid[1] + hybrid[2]
+
                 add_lcoe = ref_table[renewable_lookup, diesel_lookup]
                 add_investments = ref_investments[renewable_lookup, diesel_lookup] * energy_per_cell
                 add_capacity = ref_capacity[renewable_lookup, diesel_lookup] * energy_per_cell
@@ -1120,13 +1129,13 @@ class SettlementProcessor:
 
         # This if function here skims through T&D columns to identify if any non 0 values exist; Then it defines priority accordingly.
         if max(self.df[SET_DIST_TO_TRANS]) > 0:
-            self.df['GridDistCalibElec'] = self.df[SET_DIST_TO_TRANS]
+            self.df[SET_CALIB_GRID_DIST] = self.df[SET_DIST_TO_TRANS]
             priority = 1
         elif max(self.df[SET_MV_DIST_CURRENT]) > 0:
-            self.df['GridDistCalibElec'] = self.df[SET_MV_DIST_CURRENT]
+            self.df[SET_CALIB_GRID_DIST] = self.df[SET_MV_DIST_CURRENT]
             priority = 1
         else:
-            self.df['GridDistCalibElec'] = self.df[SET_HV_DIST_CURRENT]
+            self.df[SET_CALIB_GRID_DIST] = self.df[SET_HV_DIST_CURRENT]
             priority = 2
 
         condition = 0
@@ -1139,7 +1148,7 @@ class SettlementProcessor:
             if priority == 1:
                 print(
                     'We have identified the existence of transformers or MV lines as input data; therefore we proceed using those for the calibration')
-                self.df.loc[(self.df['GridDistCalibElec'] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
+                self.df.loc[(self.df[SET_CALIB_GRID_DIST] < 2) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
                         self.df[SET_POP_CALIB] > 500), SET_ELEC_CURRENT] = 1  # REVIEW 500 vs 300
                 urban_elec_modelled = self.df.loc[
                     (self.df[SET_ELEC_CURRENT] == 1) & (self.df[SET_URBAN] > 1), SET_ELEC_POP].sum()
@@ -1168,7 +1177,7 @@ class SettlementProcessor:
             else:
                 print(
                     'No transformers or MV lines were identified as input data; therefore we proceed to the calibration with HV line info')
-                self.df.loc[(self.df['GridDistCalibElec'] < 5) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
+                self.df.loc[(self.df[SET_CALIB_GRID_DIST] < 5) & (self.df[SET_NIGHT_LIGHTS] > 0) & (
                         self.df[SET_POP_CALIB] > 300), SET_ELEC_CURRENT] = 1
 
                 urban_elec_modelled = self.df.loc[
@@ -1373,7 +1382,7 @@ class SettlementProcessor:
         travl = self.df[SET_TRAVEL_HOURS].tolist()
         enerperhh = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
         nupppphh = self.df[SET_NUM_PEOPLE_PER_HH]
-        grid_cell_area = self.df['GridCellArea']
+        grid_cell_area = self.df[SET_GRID_CELL_AREA]
         prev_code = self.df[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)]
         new_connections = self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         total_energy_per_cell = self.df[SET_TOTAL_ENERGY_PER_CELL]
@@ -1454,7 +1463,7 @@ class SettlementProcessor:
         travl = self.df[SET_TRAVEL_HOURS].tolist()
         enerperhh = self.df[SET_ENERGY_PER_CELL + "{}".format(year)]
         nupppphh = self.df[SET_NUM_PEOPLE_PER_HH]
-        grid_cell_area = self.df['GridCellArea']
+        grid_cell_area = self.df[SET_GRID_CELL_AREA]
         prev_code = self.df[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)]
         new_connections = self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         total_energy_per_cell = self.df[SET_TOTAL_ENERGY_PER_CELL]
@@ -1804,7 +1813,7 @@ class SettlementProcessor:
 
         logging.info('Setting electrification demand as per target per year')
 
-        if max(self.df['PerCapitaDemand']) == 0:
+        if max(self.df[SET_CAPITA_DEMAND]) == 0:
             # RUN_PARAM: This shall be changed if different urban/rural categorization is decided
             wb_tier_urban_centers = int(urban_tier)
             wb_tier_urban_clusters = int(rural_tier)
@@ -1826,7 +1835,7 @@ class SettlementProcessor:
             if wb_tier_rural == 6:
                 wb_tier_rural = 'Custom'
 
-            self.df['PerCapitaDemand'] = 0
+            self.df[SET_CAPITA_DEMAND] = 0
 
             # RUN_PARAM: This shall be changed if different urban/rural categorization is decided
             # Create new columns assigning number of people per household as per Urban/Rural type
@@ -1835,51 +1844,65 @@ class SettlementProcessor:
             self.df.loc[self.df[SET_URBAN] == 2, SET_NUM_PEOPLE_PER_HH] = num_people_per_hh_urban
 
             # Define per capita residential demand
-            # self.df['PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban)]
-            self.df.loc[self.df[SET_URBAN] == 0, 'PerCapitaDemand'] = self.df[
-                'ResidentialDemandTier' + str(wb_tier_rural)]
-            self.df.loc[self.df[SET_URBAN] == 1, 'PerCapitaDemand'] = self.df[
-                'ResidentialDemandTier' + str(wb_tier_urban_clusters)]
-            self.df.loc[self.df[SET_URBAN] == 2, 'PerCapitaDemand'] = self.df[
-                'ResidentialDemandTier' + str(wb_tier_urban_centers)]
+            # self.df[SET_CAPITA_DEMAND] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban)]
+            self.df.loc[self.df[SET_URBAN] == 0, SET_CAPITA_DEMAND] = self.df[
+                SET_RESIDENTIAL_TIER + str(wb_tier_rural)]
+            self.df.loc[self.df[SET_URBAN] == 1, SET_CAPITA_DEMAND] = self.df[
+                SET_RESIDENTIAL_TIER + str(wb_tier_urban_clusters)]
+            self.df.loc[self.df[SET_URBAN] == 2, SET_CAPITA_DEMAND] = self.df[
+                SET_RESIDENTIAL_TIER + str(wb_tier_urban_centers)]
             # if max(self.df[SET_URBAN]) == 2:
-            #     self.df.loc[self.df[SET_URBAN] == 2, 'PerCapitaDemand'] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban_center)]
+            #     self.df.loc[self.df[SET_URBAN] == 2, SET_CAPITA_DEMAND] = self.df['ResidentialDemandTier1.' + str(wb_tier_urban_center)]
+
+            # REVIEW, added Tier column
+            tier_1 = 38.7  # 38.7 refers to kWh/household/year. It is the mean value between Tier 1 and Tier 2
+            tier_2 = 219
+            tier_3 = 803
+            tier_4 = 2117
+            tier_5 = 2993
+
+            self.df[SET_TIER] = 5
+            self.df.loc[self.df[SET_CAPITA_DEMAND] * self.df[SET_NUM_PEOPLE_PER_HH] < tier_1, SET_TIER] = 1
+            self.df.loc[self.df[SET_CAPITA_DEMAND] * self.df[SET_NUM_PEOPLE_PER_HH] < tier_2, SET_TIER] = 2
+            self.df.loc[self.df[SET_CAPITA_DEMAND] * self.df[SET_NUM_PEOPLE_PER_HH] < tier_3, SET_TIER] = 3
+            self.df.loc[self.df[SET_CAPITA_DEMAND] * self.df[SET_NUM_PEOPLE_PER_HH] < tier_4, SET_TIER] = 4
+
 
             # Add commercial demand
             # agri = True if 'y' in input('Include agrcultural demand? <y/n> ') else False
             # if agri:
             if int(productive_demand) == 1:
-                self.df['PerCapitaDemand'] += self.df['AgriDemand']
+                self.df[SET_CAPITA_DEMAND] += self.df[SET_AGRI_DEMAND]
 
             # commercial = True if 'y' in input('Include commercial demand? <y/n> ') else False
             # if commercial:
             if int(productive_demand) == 1:
-                self.df['PerCapitaDemand'] += self.df['CommercialDemand']
+                self.df[SET_CAPITA_DEMAND] += self.df[SET_COMMERCIAL_DEMAND]
 
             # health = True if 'y' in input('Include health demand? <y/n> ') else False
             # if health:
             if int(productive_demand) == 1:
-                self.df['PerCapitaDemand'] += self.df['HealthDemand']
+                self.df[SET_CAPITA_DEMAND] += self.df[SET_HEALTH_DEMAND]
 
             # edu = True if 'y' in input('Include educational demand? <y/n> ') else False
             # if edu:
             if int(productive_demand) == 1:
-                self.df['PerCapitaDemand'] += self.df['EducationDemand']
+                self.df[SET_CAPITA_DEMAND] += self.df[SET_EDU_DEMAND]
 
         self.df.loc[self.df[SET_URBAN] == 0, SET_ENERGY_PER_CELL + "{}".format(year)] = \
-            self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+            self.df[SET_CAPITA_DEMAND] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 1, SET_ENERGY_PER_CELL + "{}".format(year)] = \
-            self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+            self.df[SET_CAPITA_DEMAND] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 2, SET_ENERGY_PER_CELL + "{}".format(year)] = \
-            self.df['PerCapitaDemand'] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+            self.df[SET_CAPITA_DEMAND] * self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
 
         # if year - time_step == start_year:
         self.df.loc[self.df[SET_URBAN] == 0, SET_TOTAL_ENERGY_PER_CELL] = \
-            self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+            self.df[SET_CAPITA_DEMAND] * self.df[SET_POP + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 1, SET_TOTAL_ENERGY_PER_CELL] = \
-            self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+            self.df[SET_CAPITA_DEMAND] * self.df[SET_POP + "{}".format(year)]
         self.df.loc[self.df[SET_URBAN] == 2, SET_TOTAL_ENERGY_PER_CELL] = \
-            self.df['PerCapitaDemand'] * self.df[SET_POP + "{}".format(year)]
+            self.df[SET_CAPITA_DEMAND] * self.df[SET_POP + "{}".format(year)]
 
     def grid_reach_estimate(self, start_year, gridspeed):
         """ Estimates the year of grid arrival based on geospatial characteristics 
@@ -1888,17 +1911,17 @@ class SettlementProcessor:
         # logging.info('Estimate year of grid reach')
         # self.df[SET_GRID_REACH_YEAR] = 0
         # self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] == 0, SET_GRID_REACH_YEAR] = \
-        #     self.df['PlannedHVLineDist'] * self.df[SET_GRID_PENALTY] / gridspeed
+        #     self.df[SET_HV_DIST_PLANNED] * self.df[SET_GRID_PENALTY] / gridspeed
 
         self.df[SET_GRID_REACH_YEAR] = \
             self.df.apply(lambda row: int(start_year +
-                                          row['PlannedHVLineDist'] * row[SET_COMBINED_CLASSIFICATION] / gridspeed)
+                                          row[SET_HV_DIST_PLANNED] * row[SET_COMBINED_CLASSIFICATION] / gridspeed)
             if row[SET_ELEC_FUTURE_GRID + "{}".format(start_year)] == 0
             else start_year,
                           axis=1)
 
     def calculate_off_grid_lcoes(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc,
-                                 sa_pv_calc, mg_diesel_calc, sa_diesel_calc, pv_diesel_hyb, rural_hybrid, urban_hybrid,
+                                 sa_pv_calc, mg_diesel_calc, sa_diesel_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5,
                                  year, start_year, end_year, timestep):
         """
         Calcuate the LCOEs for all off-grid technologies, and calculate the minimum, so that the electrification
@@ -1937,7 +1960,7 @@ class SettlementProcessor:
                                                   total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                   prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                   num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                                  grid_cell_area=row['GridCellArea'],
+                                                  grid_cell_area=row[SET_GRID_CELL_AREA],
                                                   conf_status=row[SET_CONFLICT],
                                                   mv_line_length=row[SET_HYDRO_DIST])
             else:
@@ -1959,7 +1982,7 @@ class SettlementProcessor:
                                             total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                             prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                             num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                            grid_cell_area=row['GridCellArea'],
+                                            grid_cell_area=row[SET_GRID_CELL_AREA],
                                             conf_status=row[SET_CONFLICT],
                                             capacity_factor=row[SET_GHI] / HOURS_PER_YEAR)
             if row[SET_GHI] > 1000
@@ -1975,7 +1998,7 @@ class SettlementProcessor:
                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                               num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                              grid_cell_area=row['GridCellArea'],
+                                              grid_cell_area=row[SET_GRID_CELL_AREA],
                                               conf_status=row[SET_CONFLICT],
                                               capacity_factor=row[SET_WINDCF])
             if row[SET_WINDCF] > 0.1 else 99,
@@ -1991,7 +2014,7 @@ class SettlementProcessor:
                                                 total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                 prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                 num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                                grid_cell_area=row['GridCellArea'],
+                                                grid_cell_area=row[SET_GRID_CELL_AREA],
                                                 conf_status=row[SET_CONFLICT],
                                                 travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
 
@@ -2005,7 +2028,7 @@ class SettlementProcessor:
                                                 total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                 prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                 num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                                grid_cell_area=row['GridCellArea'],
+                                                grid_cell_area=row[SET_GRID_CELL_AREA],
                                                 conf_status=row[SET_CONFLICT],
                                                 travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
 
@@ -2021,7 +2044,7 @@ class SettlementProcessor:
                                             total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                             prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                             num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                            grid_cell_area=row['GridCellArea'],
+                                            grid_cell_area=row[SET_GRID_CELL_AREA],
                                             conf_status=row[SET_CONFLICT],
                                             capacity_factor=row[SET_GHI] / HOURS_PER_YEAR) if row[SET_GHI] > 1000
             else 99,
@@ -2041,9 +2064,13 @@ class SettlementProcessor:
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                ghi=row[SET_GHI],
                                                urban=row[SET_URBAN],
-                                               urban_hybrid=urban_hybrid,
-                                               rural_hybrid=rural_hybrid,
-                                               grid_cell_area=row['GridCellArea'],
+                                               hybrid_1=hybrid_1,
+                                               hybrid_2=hybrid_2,
+                                               hybrid_3=hybrid_3,
+                                               hybrid_4=hybrid_4,
+                                               hybrid_5=hybrid_5,
+                                               tier=row[SET_TIER],
+                                               grid_cell_area=row[SET_GRID_CELL_AREA],
                                                mg_hybrid=True,
                                                )
             if row[SET_GHI] > 1000 else 99,
@@ -2095,7 +2122,7 @@ class SettlementProcessor:
             year), SET_MIN_OFFGRID_CODE + "{}".format(year)] = codes[SET_LCOE_MG_HYBRID + "{}".format(year)]
 
     def results_columns(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-                        sa_diesel_calc, grid_calc, pv_diesel_hyb, urban_hybrid, rural_hybrid, year):
+                        sa_diesel_calc, grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year):
         """
         Once the grid extension algorithm has been run, determine the minimum overall option, and calculate the
         capacity and investment requirements for each settlement
@@ -2151,7 +2178,7 @@ class SettlementProcessor:
             year), SET_MIN_OVERALL_CODE + "{}".format(year)] = codes[SET_LCOE_MG_HYBRID + "{}".format(year)]
 
     def calculate_investments(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-                              sa_diesel_calc, grid_calc, pv_diesel_hyb, urban_hybrid, rural_hybrid, year, end_year, timestep):
+                              sa_diesel_calc, grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, end_year, timestep):
         def res_investment_cost(row):
             min_code = row[SET_MIN_OVERALL_CODE + "{}".format(year)]
 
@@ -2164,7 +2191,7 @@ class SettlementProcessor:
                                                total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                               grid_cell_area=row['GridCellArea'],
+                                               grid_cell_area=row[SET_GRID_CELL_AREA],
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                conf_status=row[SET_CONFLICT],
                                                get_investment_cost=True)
@@ -2178,7 +2205,7 @@ class SettlementProcessor:
                                            total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                            prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                            num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                           grid_cell_area=row['GridCellArea'],
+                                           grid_cell_area=row[SET_GRID_CELL_AREA],
                                            capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
                                            conf_status=row[SET_CONFLICT],
                                            get_investment_cost=True)
@@ -2192,7 +2219,7 @@ class SettlementProcessor:
                                              total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                              prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                              num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                             grid_cell_area=row['GridCellArea'],
+                                             grid_cell_area=row[SET_GRID_CELL_AREA],
                                              capacity_factor=row[SET_WINDCF],
                                              conf_status=row[SET_CONFLICT],
                                              get_investment_cost=True)
@@ -2206,7 +2233,7 @@ class SettlementProcessor:
                                                total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                               grid_cell_area=row['GridCellArea'],
+                                               grid_cell_area=row[SET_GRID_CELL_AREA],
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                conf_status=row[SET_CONFLICT],
                                                get_investment_cost=True)
@@ -2220,7 +2247,7 @@ class SettlementProcessor:
                                            total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                            prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                            num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                           grid_cell_area=row['GridCellArea'],
+                                           grid_cell_area=row[SET_GRID_CELL_AREA],
                                            capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
                                            conf_status=row[SET_CONFLICT],
                                            get_investment_cost=True)
@@ -2234,7 +2261,7 @@ class SettlementProcessor:
                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                               num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                              grid_cell_area=row['GridCellArea'],
+                                              grid_cell_area=row[SET_GRID_CELL_AREA],
                                               conf_status=row[SET_CONFLICT],
                                               mv_line_length=row[SET_HYDRO_DIST],
                                               get_investment_cost=True)
@@ -2248,7 +2275,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2266,9 +2293,13 @@ class SettlementProcessor:
                                               travel_hours=row[SET_TRAVEL_HOURS],
                                               ghi=row[SET_GHI],
                                               urban=row[SET_URBAN],
-                                              urban_hybrid=urban_hybrid,
-                                              rural_hybrid=rural_hybrid,
-                                              grid_cell_area=row['GridCellArea'],
+                                              hybrid_1=hybrid_1,
+                                              hybrid_2=hybrid_2,
+                                              hybrid_3=hybrid_3,
+                                              hybrid_4=hybrid_4,
+                                              hybrid_5=hybrid_5,
+                                              tier=row[SET_TIER],
+                                              grid_cell_area=row[SET_GRID_CELL_AREA],
                                               mg_hybrid=True,
                                               get_investment_cost=True)
             else:
@@ -2457,7 +2488,7 @@ class SettlementProcessor:
         print("The electrification rate achieved in {} is {:.1f} %".format(year, elecrate * 100))
 
     def final_decision(self, mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-                       sa_diesel_calc, grid_calc, pv_diesel_hyb, urban_hybrid, rural_hybrid, year, end_year, timestep):
+                       sa_diesel_calc, grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, end_year, timestep):
         """" ... """
 
         logging.info('Determine final electrification decision')
@@ -2513,9 +2544,13 @@ class SettlementProcessor:
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                ghi=row[SET_GHI],
                                                urban=row[SET_URBAN],
-                                               urban_hybrid=urban_hybrid,
-                                               rural_hybrid=rural_hybrid,
-                                               grid_cell_area=row['GridCellArea'],
+                                               hybrid_1=hybrid_1,
+                                               hybrid_2=hybrid_2,
+                                               hybrid_3=hybrid_3,
+                                               hybrid_4=hybrid_4,
+                                               hybrid_5=hybrid_5,
+                                               tier=row[SET_TIER],
+                                               grid_cell_area=row[SET_GRID_CELL_AREA],
                                                mg_hybrid=True,
                                                get_capacity=True
                                                )
@@ -2571,7 +2606,7 @@ class SettlementProcessor:
                                                total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                               grid_cell_area=row['GridCellArea'],
+                                               grid_cell_area=row[SET_GRID_CELL_AREA],
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                conf_status=row[SET_CONFLICT],
                                                get_investment_cost=True)
@@ -2585,7 +2620,7 @@ class SettlementProcessor:
                                            total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                            prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                            num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                           grid_cell_area=row['GridCellArea'],
+                                           grid_cell_area=row[SET_GRID_CELL_AREA],
                                            capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
                                            conf_status=row[SET_CONFLICT],
                                            get_investment_cost=True)
@@ -2599,7 +2634,7 @@ class SettlementProcessor:
                                              total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                              prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                              num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                             grid_cell_area=row['GridCellArea'],
+                                             grid_cell_area=row[SET_GRID_CELL_AREA],
                                              capacity_factor=row[SET_WINDCF],
                                              conf_status=row[SET_CONFLICT],
                                              get_investment_cost=True)
@@ -2613,7 +2648,7 @@ class SettlementProcessor:
                                                total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                                prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                               grid_cell_area=row['GridCellArea'],
+                                               grid_cell_area=row[SET_GRID_CELL_AREA],
                                                travel_hours=row[SET_TRAVEL_HOURS],
                                                conf_status=row[SET_CONFLICT],
                                                get_investment_cost=True)
@@ -2627,7 +2662,7 @@ class SettlementProcessor:
                                            total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                            prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                            num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                           grid_cell_area=row['GridCellArea'],
+                                           grid_cell_area=row[SET_GRID_CELL_AREA],
                                            capacity_factor=row[SET_GHI] / HOURS_PER_YEAR,
                                            conf_status=row[SET_CONFLICT],
                                            get_investment_cost=True)
@@ -2641,7 +2676,7 @@ class SettlementProcessor:
                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                               num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                              grid_cell_area=row['GridCellArea'],
+                                              grid_cell_area=row[SET_GRID_CELL_AREA],
                                               conf_status=row[SET_CONFLICT],
                                               mv_line_length=row[SET_HYDRO_DIST],
                                               get_investment_cost=True)
@@ -2655,7 +2690,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2677,7 +2712,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2700,7 +2735,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2723,7 +2758,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2746,7 +2781,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2769,7 +2804,7 @@ class SettlementProcessor:
                                           total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
                                           prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
                                           num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                          grid_cell_area=row['GridCellArea'],
+                                          grid_cell_area=row[SET_GRID_CELL_AREA],
                                           conf_status=row[SET_CONFLICT],
                                           additional_mv_line_length=row[SET_MIN_GRID_DIST + "{}".format(year)],
                                           elec_loop=row[SET_ELEC_ORDER + "{}".format(year)],
@@ -2977,8 +3012,8 @@ class SettlementProcessor:
 
         df_summary[year][sumtechs[32]] = min(self.df[SET_POP + "{}".format(year)])
         df_summary[year][sumtechs[33]] = max(self.df[SET_POP + "{}".format(year)])
-        df_summary[year][sumtechs[34]] = min(self.df['GridCellArea'])
-        df_summary[year][sumtechs[35]] = max(self.df['GridCellArea'])
+        df_summary[year][sumtechs[34]] = min(self.df[SET_GRID_CELL_AREA])
+        df_summary[year][sumtechs[35]] = max(self.df[SET_GRID_CELL_AREA])
         df_summary[year][sumtechs[36]] = min(self.df['CurrentMVLineDist'])
         df_summary[year][sumtechs[37]] = max(self.df['CurrentMVLineDist'])
         df_summary[year][sumtechs[38]] = min(self.df[SET_ROAD_DIST])
