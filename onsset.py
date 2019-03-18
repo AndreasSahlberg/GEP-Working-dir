@@ -1483,11 +1483,12 @@ class SettlementProcessor:
         return status, cell_path_real
 
     def elec_extension(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit,
-                       grid_connect_limit, prio=1):
+                       grid_connect_limit, auto_intensification=0, prioritization=0):
         """
         Iterate through all electrified settlements and find which settlements can be economically connected to the grid
         Repeat with newly electrified settlements until no more are added
         """
+        prio=int(prioritization)
         new_grid_capacity = 0
         grid_capacity_limit = grid_cap_gen_limit  # kW per 5 years
         x = (self.df[SET_X_DEG]).tolist()
@@ -1512,6 +1513,7 @@ class SettlementProcessor:
         grid_reach = self.df[SET_GRID_REACH_YEAR].tolist()
         cell_path_real = self.df[SET_MV_CONNECT_DIST].tolist()
         planned_hv_dist = self.df[SET_HV_DIST_PLANNED].tolist()  # If connecting from anywhere on the HV line
+        planned_mv_dist = self.df[SET_MV_DIST_PLANNED].tolist()  # If connecting from anywhere on the HV line
         self.df['new_connections_household'] = self.df[SET_NEW_CONNECTIONS + "{}".format(year)] / self.df[SET_NUM_PEOPLE_PER_HH]
 
         urban_initially_electrified = sum(self.df.loc[
@@ -1533,7 +1535,29 @@ class SettlementProcessor:
         electrified, unelectrified = self.separate_elec_status(status)
 
         if prio == 2:
-            pass
+            changes = []
+            for unelec in unelectrified:
+                if planned_mv_dist[unelec] < auto_intensification:
+                    consumption = enerperhh[unelec]  # kWh/year
+                    average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
+                    peak_load = average_load / grid_calc.base_to_peak_load_ratio  # kW
+                    dist = planned_mv_dist[unelec]
+                    dist_adjusted = grid_penalty_ratio[unelec] * dist
+
+                    grid_lcoe = 0.001
+
+                    if (new_grid_capacity + peak_load < grid_capacity_limit) \
+                            and (new_connections[unelec] / nupppphh[unelec] < grid_connect_limit):
+                        new_lcoes[unelec] = grid_lcoe
+                        cell_path_real[unelec] = dist
+                        cell_path_adjusted[unelec] = dist_adjusted
+                        new_grid_capacity += peak_load
+                        grid_connect_limit -= new_connections[unelec] / nupppphh[unelec]
+                        elecorder[unelec] = 0
+                        changes.append(unelec)
+
+            electrified.extend(changes[:])
+            unelectrified = set(unelectrified).difference(electrified)
 
         filtered_unelectrified = []
         for unelec in unelectrified:
@@ -1553,6 +1577,7 @@ class SettlementProcessor:
             if grid_lcoe < min_code_lcoes[unelec]:
                 filtered_unelectrified.append(unelec)
         unelectrified = filtered_unelectrified
+
 
         close = []
         elec_nodes2 = []
@@ -1683,7 +1708,7 @@ class SettlementProcessor:
         electrified = changes[:]
         unelectrified = set(unelectrified).difference(electrified)
 
-        #  Second to last round of extension loops from existing and new MV liens
+        #  Second to last round of extension loops from existing and new MV lines
         while len(electrified) > 0:
             logging.info('Electrification loop {} with {} electrified'.format(loops, len(electrified)))
 
@@ -1782,7 +1807,7 @@ class SettlementProcessor:
         return new_lcoes, cell_path_adjusted, elecorder, cell_path_real
 
     def run_elec(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit,
-                 grid_connect_limit):
+                 grid_connect_limit, auto_intensification, prioritization):
         """
         Runs the grid extension algorithm
         """
@@ -1797,7 +1822,9 @@ class SettlementProcessor:
                                                                                                     end_year,
                                                                                                     timestep,
                                                                                                     grid_cap_gen_limit,
-                                                                                                    grid_connect_limit)
+                                                                                                    grid_connect_limit,
+                                                                                                    auto_intensification=auto_intensification,
+                                                                                                    prioritization=prioritization)
 
     def set_scenario_variables(self, year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
                                urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop,
@@ -2372,8 +2399,8 @@ class SettlementProcessor:
         logging.info('Calculate investment cost')
         self.df[SET_INVESTMENT_COST + "{}".format(year)] = self.df.apply(res_investment_cost, axis=1)
 
-    def apply_limitations(self, eleclimit, year, timestep, prioritization):
-
+    def apply_limitations(self, eleclimit, year, timestep, prioritization, auto_densification=0):
+        # prioritization = 2
         logging.info('Determine electrification limits')
 
         if eleclimit == 1:
@@ -2386,7 +2413,7 @@ class SettlementProcessor:
             # RUN_PARAM: Here one can modify the prioritization algorithm - Currently only the first option is reviewed and ready to be used
             # REVIEW - In some cases the electrification cannot be well calibrated e.g. check Malawi at 40% access rate. As it is now, it either reaches 33% or 51%
             # TODO We might need to add a step in which newly electrified cells get x% of access (x<100) so that we better calibrate the process
-            if choice == 1:  # Prioritize grid intensification first, then lowest investment per capita in combination with dist to cities for better calibration
+            if choice == 1:  # Prioritize grid densification first, then lowest investment per capita in combination with dist to cities for better calibration
                 elecrate = 0
                 min_investment = 0
                 min_dist_to_cities = 5
@@ -2447,7 +2474,7 @@ class SettlementProcessor:
                                self.df[SET_POP + "{}".format(year)].sum()
                 else:
                     print(
-                        "The electrification target set is quite low and has been reached by grid intensification in already electrified areas")
+                        "The electrification target set is quite low and has been reached by grid densification in already electrified areas")
                     self.df.loc[
                         (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1), SET_LIMIT + "{}".format(
                             year)] = 1
@@ -2458,10 +2485,112 @@ class SettlementProcessor:
                     elecrate = self.df.loc[
                                    self.df[SET_LIMIT + "{}".format(year)] == 1, SET_POP + "{}".format(year)].sum() / \
                                self.df[SET_POP + "{}".format(year)].sum()
+            elif choice == 2:  # Prioritize grid densification first, then grid intensification (short distance) then lowest investment per capita in combination with dist to cities for better calibration
+                elecrate = 0
+                min_investment = 0
+                min_dist_to_cities = 5
+                min_densification_dist = 0
+                extension = 0
+                iter_limit_1 = 0
+                iter_limit_2 = 0
+                iter_limit_3 = 0
+                max_iter_limit_3 = auto_densification / 0.1
+                self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / self.df[SET_NEW_CONNECTIONS + "{}".format(year)]
+                if sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1][
+                           SET_POP + "{}".format(year)]) / \
+                        self.df[SET_POP + "{}".format(year)].sum() < eleclimit:
+                    eleclimit -= sum(self.df[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1][
+                                         SET_POP + "{}".format(year)]) / \
+                                 self.df[SET_POP + "{}".format(year)].sum()
+
+                    while abs(elecrate - eleclimit) > 0.01:
+                        if iter_limit_3 < max_iter_limit_3:
+                            elecrate = sum(self.df[(self.df[SET_MV_DIST_PLANNED] <= min_densification_dist) & (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1) &
+                                                   (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0)][
+                                               SET_POP + "{}".format(year)]) / \
+                                       self.df[SET_POP + "{}".format(year)].sum()
+                            if eleclimit > elecrate:
+                                min_densification_dist += 0.1
+                                iter_limit_3 += 1
+                            else:
+                                break
+                        else:
+                            extension = 1
+                            elecrate = sum(self.df[(self.df[SET_MV_DIST_PLANNED] <= min_densification_dist) & (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1) &
+                                           (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0)]
+                                           [SET_POP + "{}".format(year)]) / self.df[SET_POP + "{}".format(year)].sum()
+
+                            elecrate += sum(
+                                self.df[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] < min_investment) &
+                                        (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0) &
+                                        (self.df[SET_TRAVEL_HOURS] < min_dist_to_cities) &
+                                        (self.df[SET_MV_DIST_PLANNED] > min_densification_dist)][
+                                    SET_POP + "{}".format(year)]) / \
+                                       self.df[SET_POP + "{}".format(year)].sum()
+                            elecrate += sum(
+                                self.df[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] < min_investment) &
+                                        (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0) &
+                                        (self.df[SET_TRAVEL_HOURS] < min_dist_to_cities) &
+                                        (self.df[SET_MV_DIST_PLANNED] <= min_densification_dist) &
+                                        (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] != 1)][
+                                    SET_POP + "{}".format(year)]) / \
+                                        self.df[SET_POP + "{}".format(year)].sum()
+                            if eleclimit - elecrate > 0.05:
+                                min_investment += 0.5
+                            elif ((eleclimit - elecrate) > 0) and ((eleclimit - elecrate) <= 0.05) and (
+                                    iter_limit_1 != 50):
+                                min_dist_to_cities += 0.5
+                                iter_limit_1 += 1
+                            elif ((eleclimit - elecrate) < 0) and ((eleclimit - elecrate) > -0.05) and (iter_limit_2 != 50):
+                                if min_dist_to_cities > 0:
+                                    min_dist_to_cities -= 0.5
+                                    iter_limit_2 += 1
+                                else:
+                                    print("Further modification is needed in the limitation algorithm as goals is difficult to reach with the existing assumptions")
+                                    break
+                            else:
+                                print("Further modification is needed in the limitation algorithm as goals is difficult to reach with the existing assumptions")
+                                break
+
+                    # Updating (using the SET_LIMIT function) what is electrified in the year and what is not
+                    self.df[SET_LIMIT + "{}".format(year)] = 0
+
+                    self.df.loc[
+                        (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1), SET_LIMIT + "{}".format(year)] = 1
+
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0) &
+                                (self.df[SET_MV_DIST_PLANNED] < min_densification_dist) &
+                    (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] == 1), SET_LIMIT + "{}".format(year)] = 1
+
+                    if extension == 1:
+                        self.df.loc[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] <= min_investment) &
+                                    (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0) &
+                                    (self.df[SET_TRAVEL_HOURS] <= min_dist_to_cities) &
+                                    (self.df[SET_MV_DIST_PLANNED] > min_densification_dist), SET_LIMIT + "{}".format(year)] = 1
+
+                        self.df.loc[(self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] <= min_investment) &
+                                    (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0) &
+                                    (self.df[SET_TRAVEL_HOURS] <= min_dist_to_cities) &
+                                    (self.df[SET_MV_DIST_PLANNED] <= min_densification_dist) &
+                                    (self.df[SET_MIN_OVERALL_CODE + "{}".format(year)] != 1), SET_LIMIT + "{}".format(year)] = 1
+
+                    elecrate = self.df.loc[
+                                   self.df[SET_LIMIT + "{}".format(year)] == 1, SET_POP + "{}".format(year)].sum() / \
+                               self.df[SET_POP + "{}".format(year)].sum()
+                else:
+                    print("The electrification target set is quite low and has been reached by grid densification in already electrified areas")
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1),
+                                SET_LIMIT + "{}".format(year)] = 1
+                    self.df.loc[(self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 0),
+                                SET_LIMIT + "{}".format(year)] = 0
+
+                    elecrate = self.df.loc[
+                                   self.df[SET_LIMIT + "{}".format(year)] == 1, SET_POP + "{}".format(year)].sum() / \
+                               self.df[SET_POP + "{}".format(year)].sum()
 
             # TODO The algorithm needs to be updated
             # Review is required
-            elif choice == 2:
+            elif choice == 99:
                 elecrate = 0
                 min_investment = 0
                 self.df[SET_INVEST_PER_CAPITA + "{}".format(year)] = self.df[SET_INVESTMENT_COST + "{}".format(year)] / \
