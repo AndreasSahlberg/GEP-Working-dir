@@ -1680,7 +1680,7 @@ class SettlementProcessor:
                         elecorder[unelec] = 0
                         if unelec not in changes:
                             changes.append(unelec)
-        electrified += changes[:]
+        electrified = changes[:]
         unelectrified = set(unelectrified).difference(electrified)
 
         #  Second to last round of extension loops from existing and new MV liens
