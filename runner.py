@@ -177,7 +177,8 @@ elif choice == 3:
         max_grid_extension_dist = float(SpecsData.iloc[0][SPE_MAX_GRID_EXTENSION_DIST])
         urban_elec_ratio = float(SpecsData.iloc[0]['rural_elec_ratio_modelled'])
         rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio_modelled'])
-        grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityTimestepLimit']*1000
+        annual_grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityAnnualLimitMW']*1000
+        annual_new_grid_connections_limit = SpecsData.loc[0, 'NewGridConnectionsAnnualLimitThousands']*1000
 
         # RUN_PARAM: Fill in general and technology specific parameters (e.g. discount rate, losses etc.)
         Technology.set_default_values(base_year=start_year,
@@ -268,6 +269,9 @@ elif choice == 3:
         year = end_year               # Final year
         eleclimits = {end_year: 1}    # Access goal in the final year
 
+        grid_cap_gen_limit = time_step * annual_grid_cap_gen_limit
+        grid_connect_limit = time_step * annual_new_grid_connections_limit
+
         eleclimit = eleclimits[year]
 
         hybrid_1 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
@@ -293,9 +297,8 @@ elif choice == 3:
 
         onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
 
-
-
-        onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
+        onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit,
+                          grid_connect_limit)
 
         onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
                                  pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, grid_calc, year)
@@ -350,10 +353,10 @@ elif choice == 3:
 
         for year in yearsofanalysis:
 
-            #eleclimit = float(input('Provide the targeted electrification rate in {}:'.format(year)))
             eleclimit = eleclimits[year]
             time_step = time_steps[year]
-            #investlimit = int(input('Provide the targeted investment limit (in USD) for the year {}:'.format(year)))
+            grid_cap_gen_limit = time_step * annual_grid_cap_gen_limit
+            grid_connect_limit = time_step * annual_new_grid_connections_limit
 
             hybrid_1 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
                                                       max(onsseter.df[SET_TRAVEL_HOURS]), 1, year-time_step, end_year)
@@ -374,7 +377,8 @@ elif choice == 3:
 
             onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
 
-            onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit)
+            onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step,
+                              grid_cap_gen_limit, grid_connect_limit)
 
 
             onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
