@@ -179,6 +179,8 @@ elif choice == 3:
         rural_elec_ratio = float(SpecsData.iloc[0]['urban_elec_ratio_modelled'])
         annual_grid_cap_gen_limit = SpecsData.loc[0, 'NewGridGenerationCapacityAnnualLimitMW']*1000
         annual_new_grid_connections_limit = SpecsData.loc[0, 'NewGridConnectionsAnnualLimitThousands']*1000
+        pv_no=1
+        diesel_no=1
 
         # RUN_PARAM: Fill in general and technology specific parameters (e.g. discount rate, losses etc.)
         Technology.set_default_values(base_year=start_year,
@@ -275,15 +277,15 @@ elif choice == 3:
         eleclimit = eleclimits[year]
 
         hybrid_1 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 1, start_year, end_year)
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 1, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
         hybrid_2 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 2, start_year, end_year)
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 2, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
         hybrid_3 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 3, start_year, end_year)
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 3, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
         hybrid_4 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 4, start_year, end_year)
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 4, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
         hybrid_5 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 5, start_year, end_year)
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 5, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
 
         onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
                                         urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
@@ -359,15 +361,15 @@ elif choice == 3:
             grid_connect_limit = time_step * annual_new_grid_connections_limit
 
             hybrid_1 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 1, year-time_step, end_year)
+                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 1, year-time_step, end_year, pv_no=pv_no, diesel_no=diesel_no)
             hybrid_2 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 2, year-time_step, end_year)
+                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 2, year-time_step, end_year, pv_no=pv_no, diesel_no=diesel_no)
             hybrid_3 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 3, year-time_step, end_year)
+                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 3, year-time_step, end_year, pv_no=pv_no, diesel_no=diesel_no)
             hybrid_4 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 4, year-time_step, end_year)
+                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 4, year-time_step, end_year, pv_no=pv_no, diesel_no=diesel_no)
             hybrid_5 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 5, year-time_step, end_year)
+                                                      max(onsseter.df[SET_TRAVEL_HOURS]), 5, year-time_step, end_year, pv_no=pv_no, diesel_no=diesel_no)
 
             onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step,
                                             start_year, urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)

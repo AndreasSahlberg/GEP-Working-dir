@@ -200,9 +200,10 @@ class Technology:
                          max_travel_hours,  # highest value for travel hours encountered in the GIS data
                          tier,
                          start_year,
-                         end_year):
-        diesel_no = 15  # number of diesel generators simulated
-        pv_no = 15  # number of PV panel sizes simulated
+                         end_year,
+                         pv_no=15, # number of PV panel sizes simulated
+                         diesel_no=15, # number of diesel generators simulated
+                         ):
         n_chg = 0.92  # charge efficiency of battery
         n_dis = 0.92  # discharge efficiency of battery
         lpsp = 0.05  # maximum loss of load allowed over the year, in share of kWh
@@ -215,11 +216,14 @@ class Technology:
         diesel_om = 0.1  # annual OM cost of diesel generator
         k_t = 0.005  # temperature factor of PV panels
         if tier == 1:
-            logging.info('Preparing mg pv-diesel hybrid reference table')
-        ghi = pd.read_csv('Supplementary_files\GHI_hourly.csv', usecols=[4], sep=';', skiprows=21).as_matrix()
+            pass
+            # logging.info('Preparing mg pv-diesel hybrid reference table')
+        # ghi = pd.read_csv('Supplementary_files\GHI_hourly.csv', usecols=[4], sep=';', skiprows=21).as_matrix()
+        ghi = np.ones(8760)
         ghi = ghi[:8760]
         # hourly GHI values downloaded from SoDa for one location in the country
-        temp = pd.read_csv('Supplementary_files\Temperature_hourly.csv', usecols=[4], sep=';', skiprows=21).as_matrix()
+        # temp = pd.read_csv('Supplementary_files\Temperature_hourly.csv', usecols=[4], sep=';', skiprows=21).as_matrix()
+        temp = np.ones(8760)
         # hourly temperature values downloaded from SoDa for one location in the country
         hour_numbers = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23) * 365
         LHV_DIESEL = 9.9445485
@@ -1479,7 +1483,7 @@ class SettlementProcessor:
         return status, cell_path_real
 
     def elec_extension(self, grid_calc, max_dist, year, start_year, end_year, timestep, grid_cap_gen_limit,
-                       grid_connect_limit):
+                       grid_connect_limit, prio=1):
         """
         Iterate through all electrified settlements and find which settlements can be economically connected to the grid
         Repeat with newly electrified settlements until no more are added
@@ -1508,6 +1512,7 @@ class SettlementProcessor:
         grid_reach = self.df[SET_GRID_REACH_YEAR].tolist()
         cell_path_real = self.df[SET_MV_CONNECT_DIST].tolist()
         planned_hv_dist = self.df[SET_HV_DIST_PLANNED].tolist()  # If connecting from anywhere on the HV line
+        self.df['new_connections_household'] = self.df[SET_NEW_CONNECTIONS + "{}".format(year)] / self.df[SET_NUM_PEOPLE_PER_HH]
 
         urban_initially_electrified = sum(self.df.loc[
                                               (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (
@@ -1517,7 +1522,7 @@ class SettlementProcessor:
                                               (self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1) & (
                                                       self.df[SET_URBAN] < 2)][
                                               SET_ENERGY_PER_CELL + "{}".format(year)])
-        densification_connections = sum(self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1][SET_NEW_CONNECTIONS + "{}".format(year)])
+        densification_connections = sum(self.df.loc[self.df[SET_ELEC_FUTURE_GRID + "{}".format(year - timestep)] == 1]['new_connections_household'])
         consumption = rural_initially_electrified + urban_initially_electrified
         average_load = consumption / (1 - grid_calc.distribution_losses) / HOURS_PER_YEAR  # kW
         peak_load = average_load / grid_calc.base_to_peak_load_ratio  # kW
@@ -1526,6 +1531,9 @@ class SettlementProcessor:
 
         cell_path_adjusted = list(np.zeros(len(status)).tolist())
         electrified, unelectrified = self.separate_elec_status(status)
+
+        if prio == 2:
+            pass
 
         filtered_unelectrified = []
         for unelec in unelectrified:
@@ -1672,7 +1680,7 @@ class SettlementProcessor:
                         elecorder[unelec] = 0
                         if unelec not in changes:
                             changes.append(unelec)
-        electrified = changes[:]
+        electrified += changes[:]
         unelectrified = set(unelectrified).difference(electrified)
 
         #  Second to last round of extension loops from existing and new MV liens
@@ -2042,35 +2050,35 @@ class SettlementProcessor:
             if row[SET_WINDCF] > 0.1 else 99,
             axis=1)
 
-        logging.info('Calculate minigrid diesel LCOE')
-        self.df[SET_LCOE_MG_DIESEL + "{}".format(year)] = self.df.apply(
-            lambda row: mg_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-                                                start_year=year - timestep,
-                                                end_year=end_year,
-                                                people=row[SET_POP + "{}".format(year)],
-                                                new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-                                                total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
-                                                prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
-                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                                grid_cell_area=row[SET_GRID_CELL_AREA],
-                                                conf_status=row[SET_CONFLICT],
-                                                travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
+        # logging.info('Calculate minigrid diesel LCOE')
+        # self.df[SET_LCOE_MG_DIESEL + "{}".format(year)] = self.df.apply(
+        #     lambda row: mg_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+        #                                         start_year=year - timestep,
+        #                                         end_year=end_year,
+        #                                         people=row[SET_POP + "{}".format(year)],
+        #                                         new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+        #                                         total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+        #                                         prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+        #                                         num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+        #                                         grid_cell_area=row[SET_GRID_CELL_AREA],
+        #                                         conf_status=row[SET_CONFLICT],
+        #                                         travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
 
-        logging.info('Calculate standalone diesel LCOE')
-        self.df[SET_LCOE_SA_DIESEL + "{}".format(year)] = self.df.apply(
-            lambda row: sa_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-                                                start_year=year - timestep,
-                                                end_year=end_year,
-                                                people=row[SET_POP + "{}".format(year)],
-                                                new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-                                                total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
-                                                prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
-                                                num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                                grid_cell_area=row[SET_GRID_CELL_AREA],
-                                                conf_status=row[SET_CONFLICT],
-                                                travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
-
-        self.df[SET_LCOE_SA_DIESEL + "{}".format(year)] = 99
+        # logging.info('Calculate standalone diesel LCOE')
+        # self.df[SET_LCOE_SA_DIESEL + "{}".format(year)] = self.df.apply(
+        #     lambda row: sa_diesel_calc.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+        #                                         start_year=year - timestep,
+        #                                         end_year=end_year,
+        #                                         people=row[SET_POP + "{}".format(year)],
+        #                                         new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+        #                                         total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+        #                                         prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+        #                                         num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+        #                                         grid_cell_area=row[SET_GRID_CELL_AREA],
+        #                                         conf_status=row[SET_CONFLICT],
+        #                                         travel_hours=row[SET_TRAVEL_HOURS]), axis=1)
+        #
+        # self.df[SET_LCOE_SA_DIESEL + "{}".format(year)] = 99
 
         logging.info('Calculate standalone PV LCOE')
         self.df[SET_LCOE_SA_PV + "{}".format(year)] = self.df.apply(
@@ -2088,53 +2096,61 @@ class SettlementProcessor:
             else 99,
             axis=1)
 
-        logging.info('Calculate PV diesel hybrid LCOE')
-        self.df[SET_LCOE_MG_HYBRID + "{}".format(year)] = self.df.apply(
-            lambda row: pv_diesel_hyb.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
-                                               total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
-                                               prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
-                                               conf_status=row[SET_CONFLICT],
-                                               start_year=year - timestep,
-                                               end_year=end_year,
-                                               people=row[SET_POP + "{}".format(year)],
-                                               new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
-                                               num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
-                                               travel_hours=row[SET_TRAVEL_HOURS],
-                                               ghi=row[SET_GHI],
-                                               urban=row[SET_URBAN],
-                                               hybrid_1=hybrid_1,
-                                               hybrid_2=hybrid_2,
-                                               hybrid_3=hybrid_3,
-                                               hybrid_4=hybrid_4,
-                                               hybrid_5=hybrid_5,
-                                               tier=row[SET_TIER],
-                                               grid_cell_area=row[SET_GRID_CELL_AREA],
-                                               mg_hybrid=True,
-                                               )
-            if row[SET_GHI] > 1000 else 99,
-            axis=1)
-
-        self.df[SET_LCOE_MG_HYBRID + "{}".format(year)] *= 0.5  # DEBUGGING, REVIEW
+        # logging.info('Calculate PV diesel hybrid LCOE')
+        # self.df[SET_LCOE_MG_HYBRID + "{}".format(year)] = self.df.apply(
+        #     lambda row: pv_diesel_hyb.get_lcoe(energy_per_cell=row[SET_ENERGY_PER_CELL + "{}".format(year)],
+        #                                        total_energy_per_cell=row[SET_TOTAL_ENERGY_PER_CELL],
+        #                                        prev_code=row[SET_ELEC_FINAL_CODE + "{}".format(year - timestep)],
+        #                                        conf_status=row[SET_CONFLICT],
+        #                                        start_year=year - timestep,
+        #                                        end_year=end_year,
+        #                                        people=row[SET_POP + "{}".format(year)],
+        #                                        new_connections=row[SET_NEW_CONNECTIONS + "{}".format(year)],
+        #                                        num_people_per_hh=row[SET_NUM_PEOPLE_PER_HH],
+        #                                        travel_hours=row[SET_TRAVEL_HOURS],
+        #                                        ghi=row[SET_GHI],
+        #                                        urban=row[SET_URBAN],
+        #                                        hybrid_1=hybrid_1,
+        #                                        hybrid_2=hybrid_2,
+        #                                        hybrid_3=hybrid_3,
+        #                                        hybrid_4=hybrid_4,
+        #                                        hybrid_5=hybrid_5,
+        #                                        tier=row[SET_TIER],
+        #                                        grid_cell_area=row[SET_GRID_CELL_AREA],
+        #                                        mg_hybrid=True,
+        #                                        )
+        #     if row[SET_GHI] > 1000 else 99,
+        #     axis=1)
 
         logging.info('Determine minimum technology (off-grid)')
-        self.df[SET_MIN_OFFGRID + "{}".format(year)] = self.df[[SET_LCOE_SA_DIESEL + "{}".format(year),
-                                                                SET_LCOE_SA_PV + "{}".format(year),
+        # self.df[SET_MIN_OFFGRID + "{}".format(year)] = self.df[[SET_LCOE_SA_DIESEL + "{}".format(year),
+        #                                                         SET_LCOE_SA_PV + "{}".format(year),
+        #                                                         SET_LCOE_MG_WIND + "{}".format(year),
+        #                                                         SET_LCOE_MG_DIESEL + "{}".format(year),
+        #                                                         SET_LCOE_MG_PV + "{}".format(year),
+        #                                                         SET_LCOE_MG_HYDRO + "{}".format(year),
+        #                                                         SET_LCOE_MG_HYBRID + "{}".format(year)]].T.idxmin()
+
+        self.df[SET_MIN_OFFGRID + "{}".format(year)] = self.df[[SET_LCOE_SA_PV + "{}".format(year),
                                                                 SET_LCOE_MG_WIND + "{}".format(year),
-                                                                SET_LCOE_MG_DIESEL + "{}".format(year),
                                                                 SET_LCOE_MG_PV + "{}".format(year),
-                                                                SET_LCOE_MG_HYDRO + "{}".format(year),
-                                                                SET_LCOE_MG_HYBRID + "{}".format(year)]].T.idxmin()
+                                                                SET_LCOE_MG_HYDRO + "{}".format(year)]].T.idxmin()
 
         logging.info('Determine minimum tech LCOE')
         # self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = \
         #     self.df.apply(lambda row: (row[row[SET_MIN_OFFGRID + "{}".format(year)]]), axis=1)
-        self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = self.df[[SET_LCOE_SA_DIESEL + "{}".format(year),
-                                                                     SET_LCOE_SA_PV + "{}".format(year),
+        # self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = self.df[[SET_LCOE_SA_DIESEL + "{}".format(year),
+        #                                                              SET_LCOE_SA_PV + "{}".format(year),
+        #                                                              SET_LCOE_MG_DIESEL + "{}".format(year),
+        #                                                              SET_LCOE_MG_WIND + "{}".format(year),
+        #                                                              SET_LCOE_MG_PV + "{}".format(year),
+        #                                                              SET_LCOE_MG_HYDRO + "{}".format(year),
+        #                                                              SET_LCOE_MG_HYBRID + "{}".format(year)]].T.min()
+
+        self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)] = self.df[[SET_LCOE_SA_PV + "{}".format(year),
                                                                      SET_LCOE_MG_WIND + "{}".format(year),
-                                                                     SET_LCOE_MG_DIESEL + "{}".format(year),
                                                                      SET_LCOE_MG_PV + "{}".format(year),
-                                                                     SET_LCOE_MG_HYDRO + "{}".format(year),
-                                                                     SET_LCOE_MG_HYBRID + "{}".format(year)]].T.min()
+                                                                     SET_LCOE_MG_HYDRO + "{}".format(year)]].T.min()
 
         codes = {SET_LCOE_MG_HYBRID + "{}".format(year): 8,
                  SET_LCOE_MG_HYDRO + "{}".format(year): 7,
@@ -2167,26 +2183,36 @@ class SettlementProcessor:
         """
 
         logging.info('Determine minimum overall')
+        # self.df[SET_MIN_OVERALL + "{}".format(year)] = self.df[[SET_LCOE_GRID + "{}".format(year),
+        #                                                         SET_LCOE_SA_DIESEL + "{}".format(year),
+        #                                                         SET_LCOE_SA_PV + "{}".format(year),
+        #                                                         SET_LCOE_MG_WIND + "{}".format(year),
+        #                                                         SET_LCOE_MG_DIESEL + "{}".format(year),
+        #                                                         SET_LCOE_MG_PV + "{}".format(year),
+        #                                                         SET_LCOE_MG_HYDRO + "{}".format(year),
+        #                                                         SET_LCOE_MG_HYBRID + "{}".format(year)]].T.idxmin()
+
         self.df[SET_MIN_OVERALL + "{}".format(year)] = self.df[[SET_LCOE_GRID + "{}".format(year),
-                                                                SET_LCOE_SA_DIESEL + "{}".format(year),
                                                                 SET_LCOE_SA_PV + "{}".format(year),
                                                                 SET_LCOE_MG_WIND + "{}".format(year),
-                                                                SET_LCOE_MG_DIESEL + "{}".format(year),
                                                                 SET_LCOE_MG_PV + "{}".format(year),
-                                                                SET_LCOE_MG_HYDRO + "{}".format(year),
-                                                                SET_LCOE_MG_HYBRID + "{}".format(year)]].T.idxmin()
+                                                                SET_LCOE_MG_HYDRO + "{}".format(year)]].T.idxmin()
 
         logging.info('Determine minimum overall LCOE')
-        # self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = \
-        #     self.df.apply(lambda row: (row[row[SET_MIN_OVERALL + "{}".format(year)]]), axis=1)
+        # self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = self.df[[SET_LCOE_GRID + "{}".format(year),
+        #                                                              SET_LCOE_SA_DIESEL + "{}".format(year),
+        #                                                              SET_LCOE_SA_PV + "{}".format(year),
+        #                                                              SET_LCOE_MG_WIND + "{}".format(year),
+        #                                                              SET_LCOE_MG_DIESEL + "{}".format(year),
+        #                                                              SET_LCOE_MG_PV + "{}".format(year),
+        #                                                              SET_LCOE_MG_HYDRO + "{}".format(year),
+        #                                                              SET_LCOE_MG_HYBRID + "{}".format(year)]].T.min()
+
         self.df[SET_MIN_OVERALL_LCOE + "{}".format(year)] = self.df[[SET_LCOE_GRID + "{}".format(year),
-                                                                     SET_LCOE_SA_DIESEL + "{}".format(year),
                                                                      SET_LCOE_SA_PV + "{}".format(year),
                                                                      SET_LCOE_MG_WIND + "{}".format(year),
-                                                                     SET_LCOE_MG_DIESEL + "{}".format(year),
                                                                      SET_LCOE_MG_PV + "{}".format(year),
-                                                                     SET_LCOE_MG_HYDRO + "{}".format(year),
-                                                                     SET_LCOE_MG_HYBRID + "{}".format(year)]].T.min()
+                                                                     SET_LCOE_MG_HYDRO + "{}".format(year)]].T.min()
 
         logging.info('Add technology codes')
         codes = {SET_LCOE_GRID + "{}".format(year): 1,
@@ -2878,8 +2904,8 @@ class SettlementProcessor:
         del self.df[SET_LCOE_MG_HYDRO + "{}".format(year)]
         del self.df[SET_LCOE_MG_PV + "{}".format(year)]
         del self.df[SET_LCOE_MG_WIND + "{}".format(year)]
-        del self.df[SET_LCOE_MG_DIESEL + "{}".format(year)]
-        del self.df[SET_LCOE_SA_DIESEL + "{}".format(year)]
+        #del self.df[SET_LCOE_MG_DIESEL + "{}".format(year)]
+        #del self.df[SET_LCOE_SA_DIESEL + "{}".format(year)]
         del self.df[SET_LCOE_SA_PV + "{}".format(year)]
         del self.df[SET_MIN_OFFGRID + "{}".format(year)]
         del self.df[SET_MIN_OFFGRID_LCOE + "{}".format(year)]
