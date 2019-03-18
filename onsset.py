@@ -105,6 +105,7 @@ SET_CAP_MG_HYBRID = "Capacity_Hybrid"
 SET_CALIB_GRID_DIST = 'GridDistCalibElec'
 SET_CAPITA_DEMAND = 'PerCapitaDemand'
 SET_RESIDENTIAL_TIER = 'ResidentialDemandTier'
+SET_NTL_BIN = 'NTLBin'
 
 # Columns in the specs file must match these exactly
 SPE_COUNTRY = 'Country'
@@ -194,165 +195,203 @@ class Technology:
         cls.end_year = end_year
         cls.discount_rate = discount_rate
 
-    def pv_diesel_hybrid(self,
-                         energy_per_hh,  # kWh/household/year as defined
+    def pv_diesel_hybrid(self, energy_per_hh,  # kWh/household/year as defined
                          max_ghi,  # highest annual GHI value encountered in the GIS data
                          max_travel_hours,  # highest value for travel hours encountered in the GIS data
                          tier,
-                         diesel_no=5, #25,  # number of diesel generators simulated
-                         pv_no=5, #35,  # number of PV panel sizes simulated
-                         n_chg=0.92,  # charge efficiency of battery
-                         n_dis=0.92,  # discharge efficiency of battery
-                         lpsp=0.05,  # maximum loss of load allowed over the year, in share of kWh
-                         battery_cost=150,  # battery capital capital cost, USD/kWh of storage capacity
-                         pv_cost=2490,  # PV panel capital cost, USD/kW peak power
-                         diesel_cost=550,  # diesel generator capital cost, USD/kW rated power
-                         pv_life=20,  # PV panel expected lifetime, years
-                         diesel_life=15,  # diesel generator expected lifetime, years
-                         pv_om=0.015,  # annual OM cost of PV panels
-                         diesel_om=0.1,  # annual OM cost of diesel generator
-                         k_t=0.005):  # temperature factor of PV panels
-        logging.info('Preparing mg pv-diesel hybrid reference table')
-
+                         start_year,
+                         end_year):
+        diesel_no = 15  # number of diesel generators simulated
+        pv_no = 15  # number of PV panel sizes simulated
+        n_chg = 0.92  # charge efficiency of battery
+        n_dis = 0.92  # discharge efficiency of battery
+        lpsp = 0.05  # maximum loss of load allowed over the year, in share of kWh
+        battery_cost = 150  # battery capital capital cost, USD/kWh of storage capacity
+        pv_cost = 2490  # PV panel capital cost, USD/kW peak power
+        diesel_cost = 550  # diesel generator capital cost, USD/kW rated power
+        pv_life = 20  # PV panel expected lifetime, years
+        diesel_life = 15  # diesel generator expected lifetime, years
+        pv_om = 0.015  # annual OM cost of PV panels
+        diesel_om = 0.1  # annual OM cost of diesel generator
+        k_t = 0.005  # temperature factor of PV panels
+        if tier == 1:
+            logging.info('Preparing mg pv-diesel hybrid reference table')
         ghi = pd.read_csv('Supplementary_files\GHI_hourly.csv', usecols=[4], sep=';', skiprows=21).as_matrix()
+        ghi = ghi[:8760]
         # hourly GHI values downloaded from SoDa for one location in the country
         temp = pd.read_csv('Supplementary_files\Temperature_hourly.csv', usecols=[4], sep=';', skiprows=21).as_matrix()
         # hourly temperature values downloaded from SoDa for one location in the country
         hour_numbers = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23) * 365
-
         LHV_DIESEL = 9.9445485
         dod_max = 0.8  # maximum depth of discharge of battery
 
         # the values below define the load curve for the five tiers. The values reflect the share of the daily demand
         # expected in each hour of the day (sum of all values for one tier = 1)
-        tier5_load_curve = np.array([0.021008403, 0.021008403, 0.021008403, 0.021008403, 0.027310924, 0.037815126,
-                                     0.042016807, 0.042016807, 0.042016807, 0.042016807, 0.042016807, 0.042016807,
-                                     0.042016807, 0.042016807, 0.042016807, 0.042016807, 0.046218487, 0.050420168,
-                                     0.067226891, 0.084033613, 0.073529412, 0.052521008, 0.033613445, 0.023109244])
-        tier4_load_curve = np.array([0.017167382, 0.017167382, 0.017167382, 0.017167382, 0.025751073, 0.038626609,
-                                     0.042918455, 0.042918455, 0.042918455, 0.042918455, 0.042918455, 0.042918455,
-                                     0.042918455, 0.042918455, 0.042918455, 0.042918455, 0.0472103, 0.051502146,
-                                     0.068669528, 0.08583691, 0.075107296, 0.053648069, 0.034334764, 0.021459227])
-        tier3_load_curve = np.array([0.013297872, 0.013297872, 0.013297872, 0.013297872, 0.019060284, 0.034574468,
-                                     0.044326241, 0.044326241, 0.044326241, 0.044326241, 0.044326241, 0.044326241,
-                                     0.044326241, 0.044326241, 0.044326241, 0.044326241, 0.048758865, 0.053191489,
-                                     0.070921986, 0.088652482, 0.077570922, 0.055407801, 0.035460993, 0.019946809])
-        tier2_load_curve = np.array([0.010224949, 0.010224949, 0.010224949, 0.010224949, 0.019427403, 0.034764826,
-                                     0.040899796, 0.040899796, 0.040899796, 0.040899796, 0.040899796, 0.040899796,
-                                     0.040899796, 0.040899796, 0.040899796, 0.040899796, 0.04601227, 0.056237219,
-                                     0.081799591, 0.102249489, 0.089468303, 0.06390593, 0.038343558, 0.017893661])
-        tier1_load_curve = np.array([0, 0, 0, 0, 0.012578616, 0.031446541, 0.037735849, 0.037735849, 0.037735849,
-                                     0.037735849, 0.037735849, 0.037735849, 0.037735849, 0.037735849, 0.037735849,
-                                     0.037735849, 0.044025157, 0.062893082, 0.100628931, 0.125786164, 0.110062893,
-                                     0.078616352, 0.044025157, 0.012578616])
+        tier5_load_curve = [0.021008403, 0.021008403, 0.021008403, 0.021008403, 0.027310924, 0.037815126,
+                            0.042016807, 0.042016807, 0.042016807, 0.042016807, 0.042016807, 0.042016807,
+                            0.042016807, 0.042016807, 0.042016807, 0.042016807, 0.046218487, 0.050420168,
+                            0.067226891, 0.084033613, 0.073529412, 0.052521008, 0.033613445, 0.023109244]
+        tier4_load_curve = [0.017167382, 0.017167382, 0.017167382, 0.017167382, 0.025751073, 0.038626609,
+                            0.042918455, 0.042918455, 0.042918455, 0.042918455, 0.042918455, 0.042918455,
+                            0.042918455, 0.042918455, 0.042918455, 0.042918455, 0.0472103, 0.051502146,
+                            0.068669528, 0.08583691, 0.075107296, 0.053648069, 0.034334764, 0.021459227]
+        tier3_load_curve = [0.013297872, 0.013297872, 0.013297872, 0.013297872, 0.019060284, 0.034574468,
+                            0.044326241, 0.044326241, 0.044326241, 0.044326241, 0.044326241, 0.044326241,
+                            0.044326241, 0.044326241, 0.044326241, 0.044326241, 0.048758865, 0.053191489,
+                            0.070921986, 0.088652482, 0.077570922, 0.055407801, 0.035460993, 0.019946809]
+        tier2_load_curve = [0.010224949, 0.010224949, 0.010224949, 0.010224949, 0.019427403, 0.034764826,
+                            0.040899796, 0.040899796, 0.040899796, 0.040899796, 0.040899796, 0.040899796,
+                            0.040899796, 0.040899796, 0.040899796, 0.040899796, 0.04601227, 0.056237219,
+                            0.081799591, 0.102249489, 0.089468303, 0.06390593, 0.038343558, 0.017893661]
+        tier1_load_curve = [0, 0, 0, 0, 0.012578616, 0.031446541, 0.037735849, 0.037735849, 0.037735849,
+                            0.037735849, 0.037735849, 0.037735849, 0.037735849, 0.037735849, 0.037735849,
+                            0.037735849, 0.044025157, 0.062893082, 0.100628931, 0.125786164, 0.110062893,
+                            0.078616352, 0.044025157, 0.012578616]
+
         if tier == 1:
-            load_curve = tier1_load_curve * energy_per_hh / 365
+            load_curve = tier1_load_curve * 365
         elif tier == 2:
-            load_curve = tier2_load_curve * energy_per_hh / 365
+            load_curve = tier2_load_curve * 365
         elif tier == 3:
-            load_curve = tier3_load_curve * energy_per_hh / 365
+            load_curve = tier3_load_curve * 365
         elif tier == 4:
-            load_curve = tier4_load_curve * energy_per_hh / 365
+            load_curve = tier4_load_curve * 365
         else:
-            load_curve = tier5_load_curve * energy_per_hh / 365
+            load_curve = tier5_load_curve * 365
 
+        load_curve = np.array(load_curve) * energy_per_hh / 365
 
-        def pv_diesel_capacities(pv_capacity, battery_size, diesel_capacity, initital_condition=False):
-            condition = 1
+        def pv_diesel_capacities(pv_capacity, battery_size, diesel_capacity, pv_no, diesel_no):
+            pv_length = len(pv_capacity)
             ren_limit = 0.25
             ren_limit_2 = 0.75
             break_hour = 17
-            while condition > lpsp:
-                dod = np.zeros(24)
-                battery_use = np.zeros(24)  # Stores the amount of battery discharge during the day
-                fuel_result = 0
-                battery_life = 0
-                soc = 0.5
-                unmet_demand = 0
-                annual_diesel_gen = 0
-                for i in range(8760):
-                    diesel_gen = 0
-                    battery_use[hour_numbers[i]] = 0.0002 * soc  # Battery self-discharge
-                    soc *= 0.9998
-                    t_cell = temp[i] + 0.0256 * ghi[i]  # PV cell temperature
-                    pv_gen = pv_capacity * 0.9 * ghi[i] / 1000 * (
-                    1 - k_t * (t_cell - 298.15))  # PV generation in the hour
-                    net_load = load_curve[hour_numbers[i]] - pv_gen  # remaining load not met by PV panels
-                    if net_load <= 0:  # If pv generation is greater than load the excess energy is stored in battery
-                        if battery_size > 0:
-                            soc -= n_chg * net_load / battery_size
-                        net_load = 0
-                    max_diesel = min(diesel_capacity, net_load + (1 - soc) * battery_size / n_chg)
-                    #  Maximum aount of diesel needed to supply load and charge battery, limited by rated diesel capacity
+            dod = np.zeros(shape=(24, pv_no, diesel_no))
+            battery_use = np.zeros(
+                shape=(24, pv_no, diesel_no))  # Stores the amount of battery discharge during the day
+            fuel_result = np.zeros(shape=(pv_no, diesel_no))
+            battery_life = np.zeros(shape=(pv_no, diesel_no))
+            soc = np.ones(shape=(pv_no, diesel_no)) * 0.5
+            unmet_demand = np.zeros(shape=(pv_no, diesel_no))
+            annual_diesel_gen = np.zeros(shape=(pv_no, diesel_no))
+            dod_max = np.ones(shape=(pv_no, diesel_no)) * 0.8
 
-                    # Below is the dispatch strategy for the diesel generator as described in word document
-                    if break_hour + 1 > hour_numbers[i] > 4 and net_load > soc * battery_size * n_dis:
-                        diesel_gen = min(diesel_capacity, max(0.4 * diesel_capacity, net_load))
-                    elif 23 > hour_numbers[i] > break_hour and max_diesel > 0.40 * diesel_capacity:
-                        diesel_gen = max_diesel
-                    elif n_dis * soc * battery_size < net_load:
-                        diesel_gen = max(0.4 * diesel_capacity, max_diesel)
+            for i in range(8760):
+                battery_use[hour_numbers[i], :, :] = 0.0002 * soc  # Battery self-discharge
+                soc *= 0.9998
+                t_cell = temp[i] + 0.0256 * ghi[i]  # PV cell temperature
+                pv_gen = pv_capacity * 0.9 * ghi[i] / 1000 * (1 - k_t * (t_cell - 298.15))  # PV generation in the hour
+                net_load = load_curve[hour_numbers[i]] - pv_gen  # remaining load not met by PV panels
 
-                    if diesel_gen > 0:  # Fuel consumption is stored
-                        fuel_result += diesel_capacity * 0.08145 + diesel_gen * 0.246
-                        annual_diesel_gen += diesel_gen
+                if battery_size > 0:
+                    net_load_charge = np.where(net_load <= 0, 1, 0)
+                    soc -= (n_chg * net_load / battery_size) * net_load_charge
+                    net_load = net_load - net_load * net_load_charge  # REVIEW, NEEDED?
 
-                    if (net_load - diesel_gen) > 0:  # If diesel generator cannot meet load the battery is also used
-                        if battery_size > 0:
-                            soc -= (net_load - diesel_gen) / n_dis / battery_size
-                            battery_use[hour_numbers[i]] += (net_load - diesel_gen) / n_dis / battery_size
-                            if soc < 0:  # If battery and diesel generator cannot supply load there is unmet demand
-                                unmet_demand -= soc * n_dis * battery_size
-                                battery_use[hour_numbers[i]] += soc
-                                soc = 0
-                    else:  # If diesel generation is larger than load the excess energy is stored in battery
-                        if battery_size > 0:
-                            soc += (diesel_gen - net_load) * n_chg / battery_size
+                max_diesel = np.where(net_load + (1 - soc) * battery_size / n_chg > diesel_capacity, diesel_capacity,
+                                      net_load + (1 - soc) * battery_size / n_chg > diesel_capacity)
+                #  Maximum amount of diesel needed to supply load and charge battery, limited by rated diesel capacity
 
-                    if battery_size == 0:  # If no battery and diesel generation < net load there is unmet demand
-                        unmet_demand += net_load - diesel_gen
-                    soc = min(soc, 1)  # Battery state of charge cannot be >1
+                # Below is the dispatch strategy for the diesel generator as described in word document
+                if break_hour + 1 > hour_numbers[i] > 4:  # and net_load > soc * battery_size * n_dis:
+                    diesel_gen_1 = np.where((net_load > soc * battery_size * n_dis) & (net_load > diesel_capacity),
+                                            diesel_capacity, 0)
+                    diesel_gen_2 = np.where(
+                        (net_load > soc * battery_size * n_dis) & (net_load < 0.4 * diesel_capacity),
+                        0.4 * diesel_capacity, 0)
+                    diesel_gen_3 = np.where((net_load > soc * battery_size * n_dis) & (net_load < diesel_capacity) & (
+                            net_load > 0.4 * diesel_capacity), net_load, 0)
+                    diesel_gen = diesel_gen_1 + diesel_gen_2 + diesel_gen_3
+                elif 23 > hour_numbers[i] > break_hour:
+                    diesel_gen = np.where(max_diesel > 0.40 * diesel_capacity, max_diesel, 0)
+                else:
+                    diesel_gen_1 = np.where(
+                        (n_dis * soc * battery_size < net_load) & (0.4 * diesel_capacity > max_diesel),
+                        0.4 * diesel_capacity, 0)
+                    diesel_gen_2 = np.where(
+                        (n_dis * soc * battery_size < net_load) & (0.4 * diesel_capacity < max_diesel),
+                        max_diesel, 0)
+                    diesel_gen = diesel_gen_1 + diesel_gen_2
 
-                    dod[hour_numbers[i]] = 1 - soc  # The depth of discharge in every hour of the day is storeed
-                    if hour_numbers[i] == 23 and max(dod) > 0:  # The battery wear during the last day is calculated
-                        battery_life += sum(battery_use) / (531.52764 * max(0.1, (max(dod) * dod_max)) ** -1.12297)
+                diesel_usage = np.where(diesel_gen > 0, 1, 0)
+                fuel_result += diesel_usage * diesel_capacity * 0.08145 + diesel_gen * 0.246
+                annual_diesel_gen += diesel_gen
 
-                condition = unmet_demand / energy_per_hh  # lpsp is calculated
-                if initital_condition:  # During the first calculation the minimum PV size with no diesel generator is calculated
-                    if condition > lpsp:
-                        pv_capacity *= (1 + unmet_demand / energy_per_hh / 4)
-                elif condition > lpsp or (annual_diesel_gen > (1 - ren_limit) * energy_per_hh) or (annual_diesel_gen < (1 - ren_limit_2) * energy_per_hh):  # For the remaining configurations the solution is considered unusable if lpsp criteria is not met
-                    diesel_capacity = 99
-                    condition = 0
-                    battery_life = 1
-                elif condition < lpsp:  # If lpsp criteria is met the expected battery life is stored
-                    battery_life = np.round(1 / battery_life)
+                battery_discharge = np.where(net_load - diesel_gen > 0, 1, 0)
+                battery_charge = np.where(net_load - diesel_gen < 0, 1, 0)
+
+                if battery_size > 0:
+                    # If diesel generator cannot meet load the battery is also used
+                    battery_sufficient = np.where(soc > (net_load - diesel_gen) / n_dis / battery_size, 1, 0)
+                    battery_insufficient = np.where(soc > (net_load - diesel_gen) / n_dis / battery_size, 0, 1)
+                    soc -= battery_discharge * battery_sufficient * (net_load - diesel_gen) / n_dis / battery_size
+                    battery_use[hour_numbers[i], :, :] += (net_load - diesel_gen) / n_dis / battery_size * battery_discharge * battery_sufficient
+
+                    # If battery and diesel generator cannot supply load there is unmet demand
+                    unmet_demand += (net_load - diesel_gen - soc * n_dis * battery_size) * battery_discharge * battery_insufficient
+                    battery_use[hour_numbers[i], :, :] += battery_discharge * battery_insufficient * soc
+                    soc -= battery_discharge * battery_insufficient * soc
+
+                    # If diesel generation is larger than load the excess energy is stored in battery
+                    soc += ((diesel_gen - net_load) * n_chg / battery_size) * battery_charge
+
+                if battery_size == 0:  # If no battery and diesel generation < net load there is unmet demand
+                    unmet_demand += (net_load - diesel_gen) * battery_discharge
+
+                # Battery state of charge cannot be > 1
+                soc = np.minimum(soc, 1)
+
+                dod[hour_numbers[i], :, :] = 1 - soc  # The depth of discharge in every hour of the day is stored
+                if hour_numbers[i] == 23:  # The battery wear during the last day is calculated
+                    battery_used = np.where(dod.max(axis=0) > 0, 1, 0)
+                    battery_life += battery_use.sum(axis=0) / (531.52764 * np.maximum(0.1, dod.max(axis=0) * dod_max) ** -1.12297) * battery_used
+
+            condition = unmet_demand / energy_per_hh  # lpsp is calculated
+
+            valid_solution = np.where((condition < lpsp) & (annual_diesel_gen <= (1 - ren_limit) * energy_per_hh) & (
+                        annual_diesel_gen >= (1 - ren_limit_2) * energy_per_hh), 1, 0)
+            invalid_solution = np.where(valid_solution == 1, 0, 1)
+
+            battery_life = np.round(1 / battery_life)
+
+            diesel_capacity += 99 * invalid_solution - diesel_capacity * invalid_solution
+            battery_life -= battery_life * invalid_solution - invalid_solution
+
             return pv_capacity, diesel_capacity, battery_size, fuel_result, battery_life
 
-        # Initial PV size when no diesel generator is used is calculated and used as reference
-        ref = pv_diesel_capacities(energy_per_hh / 3000, 2 * energy_per_hh / 365, 0, initital_condition=True)
+        ref = 3 * load_curve[19]
 
-        battery_sizes = [0.5 * energy_per_hh / 365, energy_per_hh / 365, 2 * energy_per_hh / 365, 0]
+        battery_sizes = [0, 0.5 * energy_per_hh / 365, energy_per_hh / 365, 2 * energy_per_hh / 365]
         ref_battery_size = np.zeros((len(battery_sizes), pv_no, diesel_no))
         ref_panel_size = np.zeros((len(battery_sizes), pv_no, diesel_no))
         ref_diesel_cap = np.zeros((len(battery_sizes), pv_no, diesel_no))
         ref_fuel_result = np.zeros((len(battery_sizes), pv_no, diesel_no))
         ref_battery_life = np.zeros((len(battery_sizes), pv_no, diesel_no))
 
+        pv_caps = []
+        diesel_caps = []
+        diesel_extend = np.ones(pv_no)
+        pv_extend = np.ones(diesel_no)
+        for i in range(pv_no):
+            pv_caps.append(ref * (pv_no - i) / pv_no)
+
+        for j in range(diesel_no):
+            diesel_caps.append(j * max(load_curve) / diesel_no)
+
+        pv_caps = np.outer(np.array(pv_caps), pv_extend)
+        diesel_caps = np.outer(diesel_extend, np.array(diesel_caps))
+
         # For the number of diesel, pv and battery capacities the lpsp, battery lifetime and fuel usage is calculated
         for k in range(len(battery_sizes)):
-            for i in range(pv_no):
-                for j in range(diesel_no):
-                    a = pv_diesel_capacities(ref[0] * (pv_no - i) / pv_no, battery_sizes[k],
-                                             j * max(load_curve) / diesel_no)
-                    ref_panel_size[k, i, j] = a[0]
-                    ref_diesel_cap[k, i, j] = a[1]
-                    ref_battery_size[k, i, j] = a[2]
-                    ref_fuel_result[k, i, j] = a[3]
-                    ref_battery_life[k, i, j] = min(20, a[4])  # Battery life limited to maximum 20 years
+            a = pv_diesel_capacities(pv_caps, battery_sizes[k], diesel_caps, pv_no, diesel_no)
+            ref_panel_size[k, :, :] = pv_caps
+            ref_diesel_cap[k, :, :] = a[1]
+            ref_battery_size[k, :, :] = a[2]
+            ref_fuel_result[k, :, :] = a[3]
+            ref_battery_life[k, :, :] = a[4]  # Battery life limited to maximum 20 years
 
-        # Neccessary information for calculation of LCOE is defined
-        project_life = self.end_year - self.start_year
+        # Necessary information for calculation of LCOE is defined
+        project_life = end_year - start_year
         ghi_steps = int(
             ceil((max_ghi - 1000) / 50) + 1)  # GHI values rounded to nearest 50 are used for reference matrix
         diesel_cost_max = 2 * self.diesel_price * self.diesel_truck_consumption * max_travel_hours / self.diesel_truck_volume / LHV_DIESEL
@@ -391,12 +430,9 @@ class Technology:
                             for n in range(project_life):
                                 if year[n] % ref_battery_life[m, k, l] == 0:
                                     investments[n] += ref_battery_size[m, k, l] * battery_cost / dod_max
-                            salvage[-1] += (1 - (
-                            (project_life % ref_battery_life[m, k, l]) / ref_battery_life[m, k, l])) * \
-                                           battery_cost * ref_battery_size[m, k, l] / dod_max + ref_diesel_cap[
-                                                                                                    m, k, l] * \
-                                                                                                diesel_cost * (1 - (
-                            project_life % diesel_life) / diesel_life) \
+                            salvage[-1] += (1 - ((project_life % ref_battery_life[m, k, l]) / ref_battery_life[m, k, l])) * \
+                                           battery_cost * ref_battery_size[m, k, l] / dod_max + ref_diesel_cap[m, k, l] * \
+                                           diesel_cost * (1 - (project_life % diesel_life) / diesel_life) \
                                            + pv_size[m, k, l] * pv_cost * (1 - (project_life % pv_life) / pv_life)
                             discount_investments = (investments + fuel_costs - salvage + om) / discount_factor
                             discount_generation = generation / discount_factor
@@ -811,6 +847,11 @@ class SettlementProcessor:
         self.df[SET_ROAD_DIST] = pd.to_numeric(self.df[SET_ROAD_DIST], errors='coerce')
         self.df[SET_HYDRO_DIST] = pd.to_numeric(self.df[SET_HYDRO_DIST], errors='coerce')
         self.df[SET_HYDRO] = pd.to_numeric(self.df[SET_HYDRO], errors='coerce')
+        self.df[SET_NTL_BIN] = pd.to_numeric(self.df[SET_NTL_BIN], errors='coerce')
+        self.df[SET_ELEC_POP] = pd.to_numeric(self.df[SET_ELEC_POP], errors='coerce')
+
+        self.df.loc[self.df[SET_NTL_BIN] > self.df['NTLArea'], SET_NTL_BIN] = self.df['NTLArea']
+        self.df.loc[self.df[SET_ELEC_POP] > self.df[SET_POP], SET_ELEC_POP] = self.df[SET_POP]
 
         logging.info('Add column with country name')
         self.df[SET_COUNTRY] = country
@@ -1112,19 +1153,10 @@ class SettlementProcessor:
         factor = (total_pop * total_elec_ratio) / (urban_pop * urban_elec_ratio + rural_pop * rural_elec_ratio)
         urban_elec_ratio *= factor
         rural_elec_ratio *= factor
-        # print('factor: ' + str(factor))
-        self.df[SET_ELEC_POP] = self.df[SET_POP_CALIB] * self.df['NTLBin'] / self.df['NTLArea']
-        self.df.loc[self.df['NTLArea'] <= 0, [SET_ELEC_POP]] = 0
+        # self.df[SET_ELEC_POP] = self.df[SET_POP_CALIB] * self.df[SET_NTL_BIN] / self.df['NTLArea']
+        self.df.loc[self.df[SET_NTL_BIN] <= 0, [SET_ELEC_POP]] = 0
 
         logging.info('Calibrate current electrification')
-        is_round_two = False
-        grid_cutoff2 = 10
-        road_cutoff2 = 10
-        count = 0
-        prev_vals = []
-        accuracy = 0.01
-        max_iterations_one = 30
-        max_iterations_two = 60
         self.df[SET_ELEC_CURRENT] = 0
 
         # This if function here skims through T&D columns to identify if any non 0 values exist; Then it defines priority accordingly.
