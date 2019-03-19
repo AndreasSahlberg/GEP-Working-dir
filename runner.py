@@ -43,7 +43,7 @@ if choice == 1:
         df.loc[df[SET_COUNTRY] == country].to_csv(base_dir + '.csv', index=False)
 
 elif choice == 2:
-    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsData')
+    SpecsData = pd.read_excel(specs_path, sheetname='SpecsData')
     messagebox.showinfo('OnSSET', 'Open the file containing separated countries')
     base_dir = filedialog.askopenfilename()
     messagebox.showinfo('OnSSET', 'Browse to result folder and name the calibrated file')
@@ -112,7 +112,7 @@ elif choice == 2:
         writer = pd.ExcelWriter(specs_path, engine='openpyxl')
         writer.book = book
         # RUN_PARAM: Here the calibrated "specs" data are copied to a new tab called "SpecsDataCalib". This is what will later on be used to feed the model
-        SpecsData.to_excel(writer, sheet_name='SpecsDataCalib', index=False)
+        SpecsData.to_excel(writer, sheetname='SpecsDataCalib', index=False)
         writer.save()
         writer.close()
 
@@ -132,10 +132,10 @@ elif choice == 3:
 
     print('\n --- Running scenario --- \n')
 
-    ScenarioInfo = pd.read_excel(specs_path, sheet_name='ScenarioInfo')
+    ScenarioInfo = pd.read_excel(specs_path, sheetname='ScenarioInfo')
     Scenarios = ScenarioInfo['Scenario']
-    ScenarioParameters = pd.read_excel(specs_path, sheet_name='ScenarioParameters')
-    SpecsData = pd.read_excel(specs_path, sheet_name='SpecsDataCalib')
+    ScenarioParameters = pd.read_excel(specs_path, sheetname='ScenarioParameters')
+    SpecsData = pd.read_excel(specs_path, sheetname='SpecsDataCalib')
 
     for scenario in Scenarios:
         print('Scenario: ' + str(scenario+1))
@@ -228,7 +228,11 @@ elif choice == 3:
         sa_pv_calc = Technology(base_to_peak_load_ratio=0.9,
                                 tech_life=15,
                                 om_costs=0.02,
-                                capital_cost={0.020: 20000, 0.050: 11050, 0.100: 7660, 0.200: 5780, 0.300: 5070},
+                                capital_cost={0.020: 20000 * pv_capital_cost_adjust,
+                                              0.050: 11050 * pv_capital_cost_adjust,
+                                              0.100: 7660 * pv_capital_cost_adjust,
+                                              0.200: 5780 * pv_capital_cost_adjust,
+                                              0.300: 5070 * pv_capital_cost_adjust},
                                 #capital_cost=5500 * pv_capital_cost_adjust,
                                 standalone=True)
 
@@ -269,53 +273,53 @@ elif choice == 3:
         ### RUN - NO TIMESTEP
 
         # # RUN_PARAM: Fill in the next 3 parameters accordingly. Remember this specifies a run with no intermediate step
-        # time_step = end_year - start_year            # Years between final and start year
-        # year = end_year               # Final year
-        # eleclimits = {end_year: 1}    # Access goal in the final year
-        #
-        # grid_cap_gen_limit = time_step * annual_grid_cap_gen_limit
-        # grid_connect_limit = time_step * annual_new_grid_connections_limit
-        #
-        # eleclimit = eleclimits[year]
-        #
-        # hybrid_1 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-        #                                           max(onsseter.df[SET_TRAVEL_HOURS]), 1, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
-        # hybrid_2 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-        #                                           max(onsseter.df[SET_TRAVEL_HOURS]), 2, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
-        # hybrid_3 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-        #                                           max(onsseter.df[SET_TRAVEL_HOURS]), 3, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
-        # hybrid_4 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-        #                                           max(onsseter.df[SET_TRAVEL_HOURS]), 4, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
-        # hybrid_5 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
-        #                                           max(onsseter.df[SET_TRAVEL_HOURS]), 5, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
-        #
-        # onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
-        #                                 urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
-        #
-        #
-        # onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-        #                                   sa_diesel_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, start_year, end_year, time_step)
-        #
-        # if year - time_step == start_year:
-        #     onsseter.current_mv_line_dist()
-        #
-        # onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
-        #
-        # onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit,
-        #                   grid_connect_limit, auto_intensification, prioritization)
-        #
-        # onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
-        #                          pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, grid_calc, year)
-        #
-        # onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
-        #                sa_diesel_calc, grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, end_year, time_step)
-        #
-        # onsseter.apply_limitations(eleclimit, year, time_step, prioritization, auto_intensification)
-        #
-        # onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
-        #                         grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, end_year, time_step)
-        #
-        # onsseter.delete_redundant_columns(year)
+        time_step = end_year - start_year            # Years between final and start year
+        year = end_year               # Final year
+        eleclimits = {end_year: 1}    # Access goal in the final year
+
+        grid_cap_gen_limit = time_step * annual_grid_cap_gen_limit
+        grid_connect_limit = time_step * annual_new_grid_connections_limit
+
+        eleclimit = eleclimits[year]
+
+        hybrid_1 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 1, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
+        hybrid_2 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 2, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
+        hybrid_3 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 3, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
+        hybrid_4 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 4, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
+        hybrid_5 = pv_diesel_hyb.pv_diesel_hybrid(1, max(onsseter.df[SET_GHI]),
+                                                  max(onsseter.df[SET_TRAVEL_HOURS]), 5, start_year, end_year, pv_no=pv_no, diesel_no=diesel_no)
+
+        onsseter.set_scenario_variables(year, num_people_per_hh_rural, num_people_per_hh_urban, time_step, start_year,
+                                        urban_elec_ratio, rural_elec_ratio, urban_tier, rural_tier, end_year_pop, productive_demand)
+
+
+        onsseter.calculate_off_grid_lcoes(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+                                          sa_diesel_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, start_year, end_year, time_step)
+
+        if year - time_step == start_year:
+            onsseter.current_mv_line_dist()
+
+        onsseter.pre_electrification(grid_calc, grid_price, year, time_step, start_year)
+
+        onsseter.run_elec(grid_calc, max_grid_extension_dist, year, start_year, end_year, time_step, grid_cap_gen_limit,
+                          grid_connect_limit, auto_intensification, prioritization)
+
+        onsseter.results_columns(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+                                 pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, grid_calc, year)
+
+        onsseter.calculate_investments(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc,
+                       sa_diesel_calc, grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, end_year, time_step)
+
+        onsseter.apply_limitations(eleclimit, year, time_step, prioritization, auto_intensification)
+
+        onsseter.final_decision(mg_hydro_calc, mg_wind_calc, mg_pv_calc, sa_pv_calc, mg_diesel_calc, sa_diesel_calc,
+                                grid_calc, pv_diesel_hyb, hybrid_1, hybrid_2, hybrid_3, hybrid_4, hybrid_5, year, end_year, time_step)
+
+        onsseter.delete_redundant_columns(year)
 
         ### END OF FIRST RUN
 
